@@ -64,7 +64,10 @@ test("preserves silkscreen lines from the real SimpleFOC Mini board", async () =
       { label: "Real board in Circuit JSON", svg: sourceSvg },
       {
         label: "Corrected Altium export",
-        svg: serializeAltiumPcbToSvg(correctedPcb),
+        svg: serializeAltiumPcbToSvg(correctedPcb, {
+          // Match the Circuit JSON preview: copper pads cover silkscreen.
+          layerDrawingOrder: ["MULTILAYER", "TOP", "TOPOVERLAY"],
+        }),
       },
     ]),
   ).toMatchSvgSnapshot(import.meta.path)
