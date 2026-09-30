@@ -33,7 +33,7 @@ function createLabeledComparisonSvg(panels: { label: string; svg: string }[]) {
   </svg>`
 }
 
-test("snapshots missing silkscreen lines on the real SimpleFOC Mini board", async () => {
+test("preserves silkscreen lines from the real SimpleFOC Mini board", async () => {
   const circuitJson = (await Bun.file(fixtureUrl).json()) as CircuitElement[]
   const sourceLineCount = circuitJson.filter(
     (element) => element.type === "pcb_silkscreen_line",
@@ -44,8 +44,17 @@ test("snapshots missing silkscreen lines on the real SimpleFOC Mini board", asyn
   expect(sourceLineCount).toBe(105)
   expect(sourceGraphicCount).toBe(3)
 
-  const exportedPcb = exportPcb(circuitJson)
-  expect(exportedPcb.getRecordsByKind("Region").length).toBe(sourceGraphicCount)
+  // This filtered export reproduces the exporter behavior before the fix.
+  const previousPcb = exportPcb(
+    circuitJson.filter((element) => element.type !== "pcb_silkscreen_line"),
+  )
+  const correctedPcb = exportPcb(circuitJson)
+  expect(correctedPcb.getRecordsByKind("Track").length).toBe(
+    previousPcb.getRecordsByKind("Track").length + sourceLineCount,
+  )
+  expect(correctedPcb.getRecordsByKind("Region").length).toBe(
+    sourceGraphicCount,
+  )
 
   const sourceSvg = await convertCircuitJsonToPcbSvg(
     circuitJson as Parameters<typeof convertCircuitJsonToPcbSvg>[0],
@@ -55,8 +64,12 @@ test("snapshots missing silkscreen lines on the real SimpleFOC Mini board", asyn
     createLabeledComparisonSvg([
       { label: "Real board in Circuit JSON", svg: sourceSvg },
       {
-        label: "Altium export: lines skipped",
-        svg: serializeAltiumPcbToSvg(exportedPcb),
+        label: "Previous export: lines skipped",
+        svg: serializeAltiumPcbToSvg(previousPcb),
+      },
+      {
+        label: "Corrected Altium export",
+        svg: serializeAltiumPcbToSvg(correctedPcb),
       },
     ]),
   ).toMatchSvgSnapshot(import.meta.path)

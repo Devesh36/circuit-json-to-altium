@@ -1,5 +1,7 @@
+import { pcb_silkscreen_line } from "circuit-json"
 import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-pcb-ccw-rotation-degrees-to-altium"
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
+import { createAltiumTrackRecords } from "./create-pcb-annotation-primitives"
 import { createPcbComponentBodyRecords } from "./create-pcb-component-body-records"
 import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
 import { createPcbCourtyardRecords } from "./create-pcb-courtyard-records"
@@ -439,6 +441,22 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         "STOPLAYER=BOTTOM",
         "LOCKED=FALSE",
       ].join("|"),
+    )
+  }
+
+  for (const element of byType(circuitJson, "pcb_silkscreen_line")) {
+    const line = pcb_silkscreen_line.parse(element)
+    lines.push(
+      ...createAltiumTrackRecords({
+        altiumComponentIndex: componentIndex.get(line.pcb_component_id),
+        circuitPoints: [
+          { x: line.x1, y: line.y1 },
+          { x: line.x2, y: line.y2 },
+        ],
+        circuitToAltiumPcbPoint,
+        layer: line.layer === "bottom" ? "BOTTOMOVERLAY" : "TOPOVERLAY",
+        strokeWidthMm: line.stroke_width,
+      }),
     )
   }
 
