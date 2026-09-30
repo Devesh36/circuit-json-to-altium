@@ -1,7 +1,5 @@
-import { pcb_silkscreen_line } from "circuit-json"
 import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-pcb-ccw-rotation-degrees-to-altium"
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
-import { createAltiumTrackRecords } from "./create-pcb-annotation-primitives"
 import { createPcbComponentBodyRecords } from "./create-pcb-component-body-records"
 import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
 import { createPcbCourtyardRecords } from "./create-pcb-courtyard-records"
@@ -10,6 +8,7 @@ import { createPcbDocumentationRecords } from "./create-pcb-documentation-record
 import { createPcbKeepoutRecords } from "./create-pcb-keepout-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
 import { createPcbSilkscreenGraphicRecords } from "./create-pcb-silkscreen-graphic-records"
+import { createPcbSilkscreenLineRecords } from "./create-pcb-silkscreen-line-records"
 import { createPcbSilkscreenTextRecord } from "./create-pcb-silkscreen-text-record"
 import {
   asNumber,
@@ -444,21 +443,13 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     )
   }
 
-  for (const element of byType(circuitJson, "pcb_silkscreen_line")) {
-    const line = pcb_silkscreen_line.parse(element)
-    lines.push(
-      ...createAltiumTrackRecords({
-        altiumComponentIndex: componentIndex.get(line.pcb_component_id),
-        circuitPoints: [
-          { x: line.x1, y: line.y1 },
-          { x: line.x2, y: line.y2 },
-        ],
-        circuitToAltiumPcbPoint,
-        layer: line.layer === "bottom" ? "BOTTOMOVERLAY" : "TOPOVERLAY",
-        strokeWidthMm: line.stroke_width,
-      }),
-    )
-  }
+  lines.push(
+    ...createPcbSilkscreenLineRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
+  )
 
   for (const silkscreenPath of byType(circuitJson, "pcb_silkscreen_path")) {
     const route = Array.isArray(silkscreenPath.route)

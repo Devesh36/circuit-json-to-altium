@@ -72,7 +72,7 @@ test("exports a silkscreen line alongside a BRep graphic with a cutout", async (
       y1: -2,
       x2: 4,
       y2: -2,
-      stroke_width: 0.2,
+      stroke_width: "0.2mm",
     },
     {
       type: "pcb_silkscreen_graphic",
@@ -109,6 +109,7 @@ test("exports a silkscreen line alongside a BRep graphic with a cutout", async (
   expect(tracks).toHaveLength(1)
   expect(tracks[0]?.get("LAYER")).toBe("BOTTOMOVERLAY")
   expect(tracks[0]?.get("COMPONENT")).toBe("0")
+  expect(parseFloat(tracks[0]?.get("WIDTH") ?? "")).toBeCloseTo(7.874, 3)
   expect(regions).toHaveLength(1)
   expect(regions[0]?.get("LAYER")).toBe("TOPOVERLAY")
   expect(regions[0]?.get("COMPONENT")).toBe("0")
