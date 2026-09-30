@@ -44,13 +44,12 @@ test("preserves silkscreen lines from the real SimpleFOC Mini board", async () =
   expect(sourceLineCount).toBe(105)
   expect(sourceGraphicCount).toBe(3)
 
-  // This filtered export reproduces the exporter behavior before the fix.
-  const previousPcb = exportPcb(
+  const withoutLinesPcb = exportPcb(
     circuitJson.filter((element) => element.type !== "pcb_silkscreen_line"),
   )
   const correctedPcb = exportPcb(circuitJson)
   expect(correctedPcb.getRecordsByKind("Track").length).toBe(
-    previousPcb.getRecordsByKind("Track").length + sourceLineCount,
+    withoutLinesPcb.getRecordsByKind("Track").length + sourceLineCount,
   )
   expect(correctedPcb.getRecordsByKind("Region").length).toBe(
     sourceGraphicCount,
@@ -63,10 +62,6 @@ test("preserves silkscreen lines from the real SimpleFOC Mini board", async () =
   await expect(
     createLabeledComparisonSvg([
       { label: "Real board in Circuit JSON", svg: sourceSvg },
-      {
-        label: "Previous export: lines skipped",
-        svg: serializeAltiumPcbToSvg(previousPcb),
-      },
       {
         label: "Corrected Altium export",
         svg: serializeAltiumPcbToSvg(correctedPcb),
