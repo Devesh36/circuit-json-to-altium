@@ -16,6 +16,26 @@ function exportPcb(elements: CircuitElement[]) {
   return parseAltiumBinaryPcbDoc(converter.getOutput().pcb.content)
 }
 
+function getFrontViewLayerOrder(
+  pcb: ReturnType<typeof parseAltiumBinaryPcbDoc>,
+): string[] {
+  const layers = pcb.records.flatMap((record) => {
+    const layer = record.getCaseInsensitive("LAYER")?.toUpperCase()
+    return layer ? [layer] : []
+  })
+  return [...new Set(layers)].sort(
+    (left, right) =>
+      getFrontViewLayerPriority(right) - getFrontViewLayerPriority(left),
+  )
+}
+
+function getFrontViewLayerPriority(layer: string): number {
+  if (layer === "MULTILAYER") return 5
+  if (layer.startsWith("TOP")) return layer.endsWith("OVERLAY") ? 4 : 3
+  if (layer.startsWith("BOTTOM")) return layer.endsWith("OVERLAY") ? 2 : 1
+  return 0
+}
+
 function createLabeledComparisonSvg(panels: { label: string; svg: string }[]) {
   const panelSize = 800
   const headerHeight = 48
@@ -65,8 +85,7 @@ test("preserves silkscreen lines from the real SimpleFOC Mini board", async () =
       {
         label: "Corrected Altium export",
         svg: serializeAltiumPcbToSvg(correctedPcb, {
-          // Match the Circuit JSON preview: copper pads cover silkscreen.
-          layerDrawingOrder: ["MULTILAYER", "TOP", "TOPOVERLAY"],
+          layerDrawingOrder: getFrontViewLayerOrder(correctedPcb),
         }),
       },
     ]),
