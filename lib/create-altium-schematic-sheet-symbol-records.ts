@@ -37,13 +37,13 @@ type AltiumSchematicSheetEntryPlan = {
   side: 0 | 1
 }
 
-type CreateAltiumSchematicSheetSymbolPlansParams = {
+type CreateAltiumSchematicSheetSymbolPlansOptions = {
   scale?: number
   childSheets: AltiumSchematicChildSheet[]
   circuitJson: CircuitElement[]
 }
 
-type CreateAltiumSchematicSheetSymbolRecordFieldsParams = {
+type CreateAltiumSchematicSheetSymbolRecordFieldsOptions = {
   scale?: number
   altiumSymbolRecordIndex: number
   location: Point
@@ -61,7 +61,7 @@ export function createAltiumSchematicSheetSymbolPlans({
   scale = 1,
   childSheets,
   circuitJson,
-}: CreateAltiumSchematicSheetSymbolPlansParams): AltiumSchematicSheetSymbolPlan[] {
+}: CreateAltiumSchematicSheetSymbolPlansOptions): AltiumSchematicSheetSymbolPlan[] {
   const sourcePortsById = new Map<SourcePortId, CircuitElement>(
     circuitJson
       .filter((element) => element.type === "source_port")
@@ -175,7 +175,7 @@ export function createAltiumSchematicSheetSymbolOwnedRecordFields({
   altiumSymbolRecordIndex,
   location,
   plan,
-}: CreateAltiumSchematicSheetSymbolRecordFieldsParams): string[][] {
+}: CreateAltiumSchematicSheetSymbolRecordFieldsOptions): string[][] {
   const { childSheet, entries } = plan
   return [
     [

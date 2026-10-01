@@ -3,13 +3,13 @@ import { asString, byType, sanitizeField } from "./format"
 import type { CircuitElement } from "./types"
 
 /** Keep scope expressions literal: membership functions interpret * and ? as wildcards. */
-function queryString(value: string): string {
-  if (/[\r\n|*?]/u.test(value)) {
+function queryString(queryName: string): string {
+  if (/[\r\n|*?]/u.test(queryName)) {
     throw new Error(
-      `Cannot represent keepout exclusion query name: ${JSON.stringify(value)}`,
+      `Cannot represent keepout exclusion query name: ${JSON.stringify(queryName)}`,
     )
   }
-  return `'${value.replaceAll("'", "''")}'`
+  return `'${queryName.replaceAll("'", "''")}'`
 }
 
 export function createPcbKeepoutExclusionRule({

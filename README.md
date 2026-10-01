@@ -135,8 +135,10 @@ lib/
 ├── circuit-json-to-altium-converter.ts  # Step-driven converter pipeline
 ├── converter-stage.ts                   # Shared stage contract
 ├── stages/                              # PCB, schematic, project, validation
-├── create-pcb-document.ts               # Circuit JSON PCB mapping
-└── create-schematic-document.ts         # Circuit JSON schematic mapping
+├── create-pcb-document.ts               # High-level PCB record orchestration
+├── append-pcb-*.ts                      # Focused PCB domain record emitters
+├── create-schematic-document.ts         # High-level schematic orchestration
+└── append-schematic-*.ts                # Focused schematic domain emitters
 tests/
 ├── fixtures/                            # Shared round-trip and archive helpers
 └── __snapshots__/                       # Raw renderer baselines

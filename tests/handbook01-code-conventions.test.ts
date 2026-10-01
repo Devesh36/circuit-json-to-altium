@@ -8,6 +8,10 @@ type CodeConventionScanContext = {
   violations: string[]
 }
 
+const BANNED_STANDALONE_NAMES = new Set(["data", "info", "param", "value"])
+const MAX_FUNCTION_LINES = 250
+const MAX_LIBRARY_FILE_LINES = 400
+
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
   return (
     ts.isFunctionDeclaration(node) ||
@@ -25,11 +29,36 @@ function getNodeLocation(node: ts.Node, context: CodeConventionScanContext) {
   return `${context.path}:${line + 1}`
 }
 
+function isDeclaredIdentifier(node: ts.Identifier): boolean {
+  const parent = node.parent
+  return (
+    (ts.isVariableDeclaration(parent) && parent.name === node) ||
+    (ts.isParameter(parent) && parent.name === node) ||
+    (ts.isFunctionDeclaration(parent) && parent.name === node) ||
+    (ts.isClassDeclaration(parent) && parent.name === node) ||
+    (ts.isInterfaceDeclaration(parent) && parent.name === node) ||
+    (ts.isTypeAliasDeclaration(parent) && parent.name === node)
+  )
+}
+
 function scanNode(node: ts.Node, context: CodeConventionScanContext): void {
   if (isFunctionLike(node) && node.parameters.length > 2) {
     context.violations.push(
       `${getNodeLocation(node, context)} uses more than two function parameters`,
     )
+  }
+  if (isFunctionLike(node) && node.body) {
+    const startLine = context.sourceFile.getLineAndCharacterOfPosition(
+      node.getStart(context.sourceFile),
+    ).line
+    const endLine = context.sourceFile.getLineAndCharacterOfPosition(
+      node.end,
+    ).line
+    if (endLine - startLine + 1 > MAX_FUNCTION_LINES) {
+      context.violations.push(
+        `${getNodeLocation(node, context)} exceeds ${MAX_FUNCTION_LINES} lines`,
+      )
+    }
   }
   if (
     context.functionDepth > 0 &&
@@ -40,6 +69,15 @@ function scanNode(node: ts.Node, context: CodeConventionScanContext): void {
   ) {
     context.violations.push(
       `${getNodeLocation(node, context)} declares a named closure`,
+    )
+  }
+  if (
+    ts.isIdentifier(node) &&
+    isDeclaredIdentifier(node) &&
+    BANNED_STANDALONE_NAMES.has(node.text.toLowerCase())
+  ) {
+    context.violations.push(
+      `${getNodeLocation(node, context)} uses banned vague name ${node.text}`,
     )
   }
   if (
@@ -80,9 +118,10 @@ test("library code follows the enforceable handbook conventions", async () => {
   const violations: string[] = []
   const sourceGlob = new Bun.Glob("lib/**/*.ts")
   for await (const path of sourceGlob.scan(".")) {
+    const sourceText = await Bun.file(path).text()
     const sourceFile = ts.createSourceFile(
       path,
-      await Bun.file(path).text(),
+      sourceText,
       ts.ScriptTarget.Latest,
       true,
     )
@@ -92,6 +131,20 @@ test("library code follows the enforceable handbook conventions", async () => {
       sourceFile,
       violations,
     })
+    const lineCount = sourceText.split(/\r?\n/u).length
+    if (lineCount > MAX_LIBRARY_FILE_LINES) {
+      violations.push(
+        `${path}:1 exceeds ${MAX_LIBRARY_FILE_LINES} lines (${lineCount})`,
+      )
+    }
+    if (
+      path === "lib/index.ts" &&
+      sourceFile.statements.some(
+        (statement) => !ts.isExportDeclaration(statement),
+      )
+    ) {
+      violations.push("lib/index.ts:1 contains implementation code")
+    }
   }
 
   expect(violations).toEqual([])

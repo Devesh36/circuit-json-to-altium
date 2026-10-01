@@ -129,8 +129,10 @@ function isAltiumPowerPortSymbolFamily(
   return symbolFamily in ALTIUM_STYLE_INDEX_BY_POWER_PORT_SYMBOL_FAMILY
 }
 
-function isNetLabelAnchorSide(value: string): value is NetLabelAnchorSide {
-  return value in NET_LABEL_GROWTH_DIRECTION_BY_ANCHOR_SIDE
+function isNetLabelAnchorSide(
+  anchorSide: string,
+): anchorSide is NetLabelAnchorSide {
+  return anchorSide in NET_LABEL_GROWTH_DIRECTION_BY_ANCHOR_SIDE
 }
 
 function getNetLabelDecorationUniqueId(

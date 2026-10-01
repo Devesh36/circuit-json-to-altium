@@ -197,15 +197,15 @@ export function extractAltiumSchematicTemplate({
       : undefined
     return record.fields.map((field) => {
       if (field.key.toUpperCase() !== "OWNERINDEX") {
-        const sourceValue = `${field.value}`
+        const sourceFieldText = `${field.value}`
         if (field.key.toUpperCase() !== "TEXT") {
-          return `${field.key}=${sourceValue}`
+          return `${field.key}=${sourceFieldText}`
         }
         return `${field.key}=${resolveTemplateRecordText({
-          defaultText: sourceValue,
+          defaultText: sourceFieldText,
           document,
           projectContext,
-          reference: sourceValue,
+          reference: sourceFieldText,
         })}`
       }
       if (generatedOwnerIndex === undefined) {
