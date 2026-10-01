@@ -8,6 +8,7 @@ import { createPcbDocumentationRecords } from "./create-pcb-documentation-record
 import { createPcbKeepoutRecords } from "./create-pcb-keepout-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
 import { createPcbSilkscreenGraphicRecords } from "./create-pcb-silkscreen-graphic-records"
+import { createPcbSilkscreenLineRecords } from "./create-pcb-silkscreen-line-records"
 import { createPcbSilkscreenTextRecord } from "./create-pcb-silkscreen-text-record"
 import {
   asNumber,
@@ -441,6 +442,14 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       ].join("|"),
     )
   }
+
+  lines.push(
+    ...createPcbSilkscreenLineRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
+  )
 
   for (const silkscreenPath of byType(circuitJson, "pcb_silkscreen_path")) {
     const route = Array.isArray(silkscreenPath.route)
