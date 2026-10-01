@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
 import ts from "typescript"
 
+// These checks mirror https://github.com/tscircuit/handbook/blob/main/guides/code.md.
+
 type CodeConventionScanContext = {
   functionDepth: number
   path: string
@@ -9,8 +11,6 @@ type CodeConventionScanContext = {
 }
 
 const BANNED_STANDALONE_NAMES = new Set(["data", "info", "param", "value"])
-const MAX_FUNCTION_LINES = 250
-const MAX_LIBRARY_FILE_LINES = 400
 
 function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
   return (
@@ -46,19 +46,6 @@ function scanNode(node: ts.Node, context: CodeConventionScanContext): void {
     context.violations.push(
       `${getNodeLocation(node, context)} uses more than two function parameters`,
     )
-  }
-  if (isFunctionLike(node) && node.body) {
-    const startLine = context.sourceFile.getLineAndCharacterOfPosition(
-      node.getStart(context.sourceFile),
-    ).line
-    const endLine = context.sourceFile.getLineAndCharacterOfPosition(
-      node.end,
-    ).line
-    if (endLine - startLine + 1 > MAX_FUNCTION_LINES) {
-      context.violations.push(
-        `${getNodeLocation(node, context)} exceeds ${MAX_FUNCTION_LINES} lines`,
-      )
-    }
   }
   if (
     context.functionDepth > 0 &&
@@ -114,7 +101,7 @@ function scanNode(node: ts.Node, context: CodeConventionScanContext): void {
   )
 }
 
-test("library code follows the enforceable handbook conventions", async () => {
+test("library code follows the documented handbook conventions", async () => {
   const violations: string[] = []
   const sourceGlob = new Bun.Glob("lib/**/*.ts")
   for await (const path of sourceGlob.scan(".")) {
@@ -131,12 +118,6 @@ test("library code follows the enforceable handbook conventions", async () => {
       sourceFile,
       violations,
     })
-    const lineCount = sourceText.split(/\r?\n/u).length
-    if (lineCount > MAX_LIBRARY_FILE_LINES) {
-      violations.push(
-        `${path}:1 exceeds ${MAX_LIBRARY_FILE_LINES} lines (${lineCount})`,
-      )
-    }
     if (
       path === "lib/index.ts" &&
       sourceFile.statements.some(
