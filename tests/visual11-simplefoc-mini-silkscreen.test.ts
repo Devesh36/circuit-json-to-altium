@@ -64,7 +64,7 @@ test("preserves silkscreen lines from the real SimpleFOC Mini board", async () =
       { label: "Real board in Circuit JSON", svg: sourceSvg },
       {
         label: "Corrected Altium export",
-        svg: serializeAltiumPcbToSvg(correctedPcb),
+        svg: serializeAltiumPcbToSvg(correctedPcb, { viewSide: "top" }),
       },
     ]),
   ).toMatchSvgSnapshot(import.meta.path)
