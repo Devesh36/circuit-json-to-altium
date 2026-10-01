@@ -13,6 +13,18 @@ type CreatePcbKeepoutRecordsOptions = {
   circuitToAltiumPcbPoint: PointTransform
 }
 
+function addKeepoutUnionIndex({
+  record,
+  unionIndex,
+}: {
+  record: string
+  unionIndex: number | undefined
+}): string {
+  return unionIndex === undefined
+    ? record
+    : `${record}|UNIONINDEX=${unionIndex}`
+}
+
 export function createPcbKeepoutRecords({
   circuitJson,
   circuitToAltiumPcbPoint,
@@ -35,8 +47,6 @@ export function createPcbKeepoutRecords({
         }),
       )
     }
-    const markUnion = (record: string) =>
-      unionIndex === undefined ? record : `${record}|UNIONINDEX=${unionIndex}`
     if (keepout.shape === "outline" && keepout.stroke_width <= 0) {
       throw new Error(
         `PCB keepout outline ${keepout.pcb_keepout_id} requires a stroke width`,
@@ -45,8 +55,8 @@ export function createPcbKeepoutRecords({
     for (const layer of keepout.layers.map(getAltiumKeepoutLayer)) {
       if (keepout.shape === "rect") {
         records.push(
-          markUnion(
-            createAltiumFillRecord({
+          addKeepoutUnionIndex({
+            record: createAltiumFillRecord({
               center: keepout.center,
               circuitToAltiumPcbPoint,
               heightMm: keepout.height,
@@ -54,14 +64,15 @@ export function createPcbKeepoutRecords({
               layer,
               widthMm: keepout.width,
             }),
-          ),
+            unionIndex,
+          }),
         )
         continue
       }
       if (keepout.shape === "circle") {
         records.push(
-          markUnion(
-            createAltiumRegionRecord({
+          addKeepoutUnionIndex({
+            record: createAltiumRegionRecord({
               circuitPoints: createCirclePoints({
                 center: keepout.center,
                 radiusMm: keepout.radius,
@@ -70,7 +81,8 @@ export function createPcbKeepoutRecords({
               isKeepout: true,
               layer,
             }),
-          ),
+            unionIndex,
+          }),
         )
         continue
       }
@@ -81,7 +93,7 @@ export function createPcbKeepoutRecords({
           isKeepout: true,
           layer,
           strokeWidthMm: keepout.stroke_width,
-        }).map(markUnion),
+        }).map((record) => addKeepoutUnionIndex({ record, unionIndex })),
       )
     }
   }

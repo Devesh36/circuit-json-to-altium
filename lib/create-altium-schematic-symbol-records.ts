@@ -20,6 +20,9 @@ type AltiumSchematicPinGeometry = {
   location: Point
 }
 
+type SchematicPinLabel = string
+type SchematicPinTerminal = string
+
 const ALTIUM_JUSTIFICATION_BY_TEXT_ANCHOR = {
   bottom_left: 0,
   middle_bottom: 1,
@@ -36,8 +39,8 @@ export type AltiumSchematicSymbolRecords = {
   commentPlacement?: AltiumSchematicTextPlacement
   designatorPlacement?: AltiumSchematicTextPlacement
   graphicRecordFields: string[][]
-  pinGeometryByLabel: Map<string, AltiumSchematicPinGeometry>
-  pinGeometryByTerminal: Map<string, AltiumSchematicPinGeometry>
+  pinGeometryByLabel: Map<SchematicPinLabel, AltiumSchematicPinGeometry>
+  pinGeometryByTerminal: Map<SchematicPinTerminal, AltiumSchematicPinGeometry>
 }
 
 type CreateAltiumSchematicSymbolRecordsOptions = {
@@ -152,8 +155,14 @@ function createAltiumPinGeometryMaps({
   AltiumSchematicSymbolRecords,
   "pinGeometryByLabel" | "pinGeometryByTerminal"
 > {
-  const pinGeometryByLabel = new Map<string, AltiumSchematicPinGeometry>()
-  const pinGeometryByTerminal = new Map<string, AltiumSchematicPinGeometry>()
+  const pinGeometryByLabel = new Map<
+    SchematicPinLabel,
+    AltiumSchematicPinGeometry
+  >()
+  const pinGeometryByTerminal = new Map<
+    SchematicPinTerminal,
+    AltiumSchematicPinGeometry
+  >()
 
   for (const port of schematicSymbol.ports) {
     const connectedPrimitivePoints = schematicSymbol.primitives.flatMap(

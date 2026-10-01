@@ -58,12 +58,17 @@ function getPadName(pad: CircuitElement, context: PadLookupContext): string {
   )
 }
 
-function getSmtPadShapeFields(
-  pad: CircuitElement,
-  width: number,
-  height: number,
-  layer: "TOP" | "BOTTOM",
-): string[] {
+function getSmtPadShapeFields({
+  pad,
+  width,
+  height,
+  layer,
+}: {
+  pad: CircuitElement
+  width: number
+  height: number
+  layer: "TOP" | "BOTTOM"
+}): string[] {
   const shape = asString(pad.shape).toLowerCase()
   if (shape === "circle") return ["SHAPE=ROUND"]
 
@@ -259,7 +264,7 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         "LOCKED=FALSE",
         `X=${formatMil(altiumCenter.x)}`,
         `Y=${formatMil(altiumCenter.y)}`,
-        ...getSmtPadShapeFields(pad, width, height, layer),
+        ...getSmtPadShapeFields({ pad, width, height, layer }),
         `XSIZE=${formatMil(width * MILLIMETERS_TO_MILS)}`,
         `YSIZE=${formatMil(height * MILLIMETERS_TO_MILS)}`,
       ].join("|"),

@@ -50,6 +50,28 @@ type NetLabelDisplayGeometry = {
   textPosition: Point
 }
 
+type NetLabelPointContext = {
+  direction: Point
+  origin: Point
+  perpendicular: Point
+}
+
+function getNetLabelPoint(
+  { along, across = 0 }: { along: number; across?: number },
+  context: NetLabelPointContext,
+): Point {
+  return {
+    x:
+      context.origin.x +
+      context.direction.x * along +
+      context.perpendicular.x * across,
+    y:
+      context.origin.y +
+      context.direction.y * along +
+      context.perpendicular.y * across,
+  }
+}
+
 const NET_LABEL_GROWTH_DIRECTION_BY_ANCHOR_SIDE: Record<
   NetLabelAnchorSide,
   Point
@@ -161,10 +183,11 @@ function getNetLabelDisplayGeometry({
     ALTIUM_SCHEMATIC_NET_LABEL_MINIMUM_WIDTH * scale,
   )
   const perpendicular = { x: -direction.y, y: direction.x }
-  const point = (along: number, across = 0): Point => ({
-    x: altiumLabelPosition.x + direction.x * along + perpendicular.x * across,
-    y: altiumLabelPosition.y + direction.y * along + perpendicular.y * across,
-  })
+  const netLabelPointContext = {
+    direction,
+    origin: altiumLabelPosition,
+    perpendicular,
+  }
   // Match Circuit JSON's 0.2-unit body around its 0.18-unit default font.
   // This keeps adjacent labels on a 0.2-unit pin pitch from overlapping.
   const halfHeight = (fontSize * (0.2 / 0.18)) / 2
@@ -174,14 +197,26 @@ function getNetLabelDisplayGeometry({
   return {
     orientation: textPresentation.orientation,
     outlinePoints: [
-      point(0),
-      point(pointDepth, halfHeight),
-      point(width, halfHeight),
-      point(width, -halfHeight),
-      point(pointDepth, -halfHeight),
+      getNetLabelPoint({ along: 0 }, netLabelPointContext),
+      getNetLabelPoint(
+        { along: pointDepth, across: halfHeight },
+        netLabelPointContext,
+      ),
+      getNetLabelPoint(
+        { along: width, across: halfHeight },
+        netLabelPointContext,
+      ),
+      getNetLabelPoint(
+        { along: width, across: -halfHeight },
+        netLabelPointContext,
+      ),
+      getNetLabelPoint(
+        { along: pointDepth, across: -halfHeight },
+        netLabelPointContext,
+      ),
     ],
     textJustification: textPresentation.justification,
-    textPosition: point(textInset),
+    textPosition: getNetLabelPoint({ along: textInset }, netLabelPointContext),
   }
 }
 

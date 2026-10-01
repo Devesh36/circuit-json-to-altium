@@ -1,43 +1,32 @@
 import { expect, test } from "bun:test"
-import {
-  board,
-  expectValidPcb,
-  extractArchive,
-  pcbComponent,
-  sourceComponent,
-} from "./fixtures"
+import { CircuitJsonToAltiumConverter } from "../lib"
+import { board } from "./fixtures"
 
-test("falls back to a finite rectangular board for invalid geometry", async () => {
-  const result = await extractArchive([
+test("rejects invalid board geometry instead of silently replacing it", () => {
+  const invalidOutlineConverter = new CircuitJsonToAltiumConverter([
     board({
-      center: { x: Number.NaN, y: Number.POSITIVE_INFINITY },
-      width: -1,
-      height: 0,
       outline: [
         { x: 0, y: 0 },
         { x: Number.NaN, y: 2 },
         { x: 2, y: 0 },
       ],
     }),
-    sourceComponent("sc1", "U1"),
-    pcbComponent({
-      pcbComponentId: "pc1",
-      sourceComponentId: "sc1",
-      overrides: {
-        center: { x: Number.NaN, y: 0 },
-        width: -5,
-        height: 0,
-      },
-    }),
   ])
+  expect(() => invalidOutlineConverter.runUntilFinished()).toThrow(
+    "pcb_board.outline[1] must contain finite x and y coordinates",
+  )
 
-  expect(result.pcb.board?.outline.points).toHaveLength(5)
-  expect(result.pcb.boardGeometry.outline.bounds).toEqual({
-    minX: 1000,
-    minY: 1000,
-    maxX: 4937.0079,
-    maxY: 4149.6063,
-  })
-  expect(result.pcb.components[0]?.get("PATTERN")).toBe("TSCIRCUIT-1x1mm")
-  expectValidPcb(result.pcb)
+  const invalidCenterConverter = new CircuitJsonToAltiumConverter([
+    board({ center: { x: Number.NaN, y: Number.POSITIVE_INFINITY } }),
+  ])
+  expect(() => invalidCenterConverter.runUntilFinished()).toThrow(
+    "pcb_board.center must contain finite x and y coordinates",
+  )
+
+  const invalidSizeConverter = new CircuitJsonToAltiumConverter([
+    board({ width: -1, height: 0 }),
+  ])
+  expect(() => invalidSizeConverter.runUntilFinished()).toThrow(
+    "pcb_board.width must be a positive finite number",
+  )
 })

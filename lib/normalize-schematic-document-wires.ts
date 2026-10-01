@@ -8,6 +8,7 @@ import { normalizeSchematicWireSegments } from "./normalize-schematic-wire-segme
 import type { Point } from "./types"
 
 type WireSegment = { from: Point; to: Point; record: AltiumRecord }
+type SchematicWireStyleKey = string
 
 /** Normalize the completed export, including fractional net-label leaders.
  * Owned artwork and wires with children are left alone. Removing sheet wires
@@ -16,7 +17,7 @@ type WireSegment = { from: Point; to: Point; record: AltiumRecord }
 export function normalizeSchematicDocumentWires(asciiContent: string): string {
   const document = parseAltiumSchDoc(asciiContent)
   const replacements = new Map<AltiumRecord, AltiumRecord[]>()
-  const groups = new Map<string, WireSegment[]>()
+  const groups = new Map<SchematicWireStyleKey, WireSegment[]>()
   for (const wire of document.wires) {
     if (document.getParent(wire) || document.getOwnedRecords(wire).length) {
       continue

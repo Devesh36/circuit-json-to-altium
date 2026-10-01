@@ -24,6 +24,17 @@ export type CircuitJsonToAltiumConverterOptions = {
   schematicUnitsPerCircuitUnit?: number
 }
 
+function assertUniqueArchiveFilenames(filenames: string[]): void {
+  const seenFilenames = new Set<string>()
+  for (const filename of filenames) {
+    const normalizedFilename = filename.toLocaleLowerCase("en-US")
+    if (seenFilenames.has(normalizedFilename)) {
+      throw new Error(`Duplicate Altium archive filename: ${filename}`)
+    }
+    seenFilenames.add(normalizedFilename)
+  }
+}
+
 function normalizeCircuitJson(
   circuitJson: CircuitJsonInput,
 ): NormalizedCircuitJson {
@@ -117,6 +128,12 @@ export class CircuitJsonToAltiumConverter {
 
   async getOutputZip(): Promise<Uint8Array> {
     const { pcb, project, schematics } = this.getOutput()
+    assertUniqueArchiveFilenames([
+      project.filename,
+      pcb.filename,
+      ...schematics.map(({ filename }) => filename),
+      "README.txt",
+    ])
     const zip = new JSZip()
     zip.file(project.filename, project.content)
     zip.file(pcb.filename, pcb.content)

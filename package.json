@@ -38,7 +38,7 @@
     "transformation-matrix": "^3.1.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.9",
+    "@biomejs/biome": "2.5.15",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.16",
     "circuit-to-svg": "^0.0.403",

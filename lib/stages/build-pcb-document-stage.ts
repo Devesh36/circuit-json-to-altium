@@ -7,11 +7,16 @@ export class BuildPcbDocumentStage extends ConverterStage<
   NormalizedCircuitJson,
   AltiumPcbFile
 > {
+  private asciiContent: string | undefined
+
   _step(): void {
-    const asciiContent = createPcbDocument(this.input)
+    if (this.asciiContent === undefined) {
+      this.asciiContent = createPcbDocument(this.input)
+      return
+    }
     this.context.pcb = {
-      asciiContent,
-      content: serializeAltiumPcbDocWithKeepoutRules(asciiContent),
+      asciiContent: this.asciiContent,
+      content: serializeAltiumPcbDocWithKeepoutRules(this.asciiContent),
       filename: `${this.context.safeProjectName}.PcbDoc`,
     }
     this.finished = true

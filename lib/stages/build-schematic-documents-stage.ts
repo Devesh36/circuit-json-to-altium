@@ -4,10 +4,16 @@ import type { AltiumSchematicChildSheet } from "../create-altium-schematic-sheet
 import { createHairlinePowerPortDefinitions } from "../create-hairline-power-port-definitions"
 import { createSchematicDocument } from "../create-schematic-document"
 import { extractAltiumSchematicTemplate } from "../extract-altium-schematic-template"
-import { asNumber, asString, byType } from "../format"
+import {
+  asNumber,
+  asString,
+  byType,
+  isWindowsReservedFilename,
+} from "../format"
 import type {
   AltiumSchematicFile,
   AltiumSchematicSheetOptions,
+  CircuitJsonToAltiumConverterContext,
   NormalizedCircuitJson,
   SchematicSheetId,
 } from "../types"
@@ -21,17 +27,22 @@ function getSchematicSheetSettings(
   )
 }
 
-function getSchematicFilename({
+type SchematicSourceFilenameKey = string
+
+type SchematicFilenameCandidate = {
+  identityKey: SchematicSourceFilenameKey
+  preferredFilename: string
+}
+
+function getSchematicFilenameCandidate({
   fallbackFilename,
   sourceFilename,
 }: {
   fallbackFilename: string
   sourceFilename: string
-}): string {
-  const filenameWithoutDirectories = sourceFilename
-    .replaceAll("\\", "/")
-    .split("/")
-    .at(-1)
+}): SchematicFilenameCandidate {
+  const normalizedSourceFilename = sourceFilename.replaceAll("\\", "/").trim()
+  const filenameWithoutDirectories = normalizedSourceFilename.split("/").at(-1)
   const filenameWithoutExtension = filenameWithoutDirectories?.replace(
     /\.SchDoc$/iu,
     "",
@@ -46,27 +57,88 @@ function getSchematicFilename({
       "-",
     )
   }
+  if (!safeFilename) {
+    return {
+      identityKey: `fallback:${fallbackFilename.toLocaleLowerCase("en-US")}`,
+      preferredFilename: fallbackFilename,
+    }
+  }
+  const preferredFilename = `${isWindowsReservedFilename(safeFilename) ? `board-${safeFilename}` : safeFilename}.SchDoc`
+  return {
+    identityKey: `source:${normalizedSourceFilename.toLocaleLowerCase("en-US")}`,
+    preferredFilename,
+  }
+}
 
-  return safeFilename ? `${safeFilename}.SchDoc` : fallbackFilename
+function reserveUniqueSchematicFilename({
+  preferredFilename,
+  reservedFilenames,
+}: {
+  preferredFilename: string
+  reservedFilenames: Set<string>
+}): string {
+  const extension = ".SchDoc"
+  const baseFilename = preferredFilename.endsWith(extension)
+    ? preferredFilename.slice(0, -extension.length)
+    : preferredFilename
+  let suffix = 1
+  let filename = `${baseFilename}${extension}`
+  while (reservedFilenames.has(filename.toLocaleLowerCase("en-US"))) {
+    suffix++
+    filename = `${baseFilename}-${suffix}${extension}`
+  }
+  reservedFilenames.add(filename.toLocaleLowerCase("en-US"))
+  return filename
+}
+
+type SchematicDocumentDefinition = {
+  childSheets: AltiumSchematicChildSheet[]
+  filename: string
+  includeAllSchematicElements: boolean
+  schematicSheetId: SchematicSheetId | undefined
 }
 
 export class BuildSchematicDocumentsStage extends ConverterStage<
   NormalizedCircuitJson,
   AltiumSchematicFile[]
 > {
-  _step(): void {
+  private readonly documentDefinitions: SchematicDocumentDefinition[]
+  private documentIndex = 0
+
+  constructor(
+    input: NormalizedCircuitJson,
+    context: CircuitJsonToAltiumConverterContext,
+  ) {
+    super(input, context)
+    this.documentDefinitions = this.createDocumentDefinitions()
+    this.context.schematics = []
+  }
+
+  private createDocumentDefinitions(): SchematicDocumentDefinition[] {
     const sheets = byType(this.input, "schematic_sheet").sort(
       (leftSheet, rightSheet) =>
         asNumber(leftSheet.sheet_index) - asNumber(rightSheet.sheet_index),
     )
+    const rootFilename = `${this.context.safeProjectName}.SchDoc`
+    const reservedFilenames = new Set([rootFilename.toLocaleLowerCase("en-US")])
+    const filenameBySource = new Map<SchematicSourceFilenameKey, string>()
     const childSheets: AltiumSchematicChildSheet[] = sheets.map(
       (sheet, index) => {
         const fallbackFilename = `${this.context.safeProjectName}-${String(index + 1).padStart(2, "0")}.SchDoc`
+        const candidate = getSchematicFilenameCandidate({
+          fallbackFilename,
+          sourceFilename: asString(sheet.source_filename),
+        })
+        let filename = filenameBySource.get(candidate.identityKey)
+        if (!filename) {
+          filename = reserveUniqueSchematicFilename({
+            preferredFilename: candidate.preferredFilename,
+            reservedFilenames,
+          })
+          filenameBySource.set(candidate.identityKey, filename)
+        }
         return {
-          filename: getSchematicFilename({
-            fallbackFilename,
-            sourceFilename: asString(sheet.source_filename),
-          }),
+          filename,
           name:
             asString(sheet.display_name) ||
             asString(sheet.name) ||
@@ -83,63 +155,73 @@ export class BuildSchematicDocumentsStage extends ConverterStage<
       seenChildFilenames.add(normalizedFilename)
       return true
     })
-    const documentDefinitions =
-      childSheets.length === 0
-        ? [
-            {
-              childSheets: [],
-              filename: `${this.context.safeProjectName}.SchDoc`,
-              includeAllSchematicElements: true,
-              schematicSheetId: undefined,
-            },
-          ]
-        : [
-            {
-              childSheets,
-              filename: `${this.context.safeProjectName}.SchDoc`,
-              includeAllSchematicElements: false,
-              schematicSheetId: undefined,
-            },
-            ...uniqueChildSheets.map((childSheet) => ({
-              childSheets: [],
-              filename: childSheet.filename,
-              includeAllSchematicElements: false,
-              schematicSheetId: childSheet.schematicSheetId,
-            })),
-          ]
-    this.context.schematics = documentDefinitions.map((definition) => {
-      const sheetOptions = getSchematicSheetSettings(
-        this.context.schematicSheets,
-        definition.schematicSheetId,
-      )
-      const template = sheetOptions?.templateContent
-        ? extractAltiumSchematicTemplate({
-            content: sheetOptions.templateContent,
-            projectContext: this.context.schematicProjectContext,
-          })
-        : undefined
-      const asciiContent = createSchematicDocument({
-        unitsPerCircuitUnit: this.context.schematicUnitsPerCircuitUnit,
-        childSheets: definition.childSheets,
-        circuitJson: this.input,
-        schematicSheetId: definition.schematicSheetId,
-        includeAllSchematicElements: definition.includeAllSchematicElements,
-        sheetSettings: sheetOptions,
-        template,
-      })
-      return {
-        asciiContent,
-        content: serializeAltiumSchDocToBinary(asciiContent, {
-          embeddedImages: template?.embeddedImages,
-          objectDefinitionRecords: createHairlinePowerPortDefinitions(
-            asciiContent,
-            this.context.schematicUnitsPerCircuitUnit / 20,
-          ),
-        }),
-        filename: definition.filename,
-      }
+    return childSheets.length === 0
+      ? [
+          {
+            childSheets: [],
+            filename: rootFilename,
+            includeAllSchematicElements: true,
+            schematicSheetId: undefined,
+          },
+        ]
+      : [
+          {
+            childSheets,
+            filename: rootFilename,
+            includeAllSchematicElements: false,
+            schematicSheetId: undefined,
+          },
+          ...uniqueChildSheets.map((childSheet) => ({
+            childSheets: [],
+            filename: childSheet.filename,
+            includeAllSchematicElements: false,
+            schematicSheetId: childSheet.schematicSheetId,
+          })),
+        ]
+  }
+
+  _step(): void {
+    const definition = this.documentDefinitions[this.documentIndex]
+    if (!definition) {
+      this.finished = true
+      return
+    }
+    const sheetOptions = getSchematicSheetSettings(
+      this.context.schematicSheets,
+      definition.schematicSheetId,
+    )
+    const template = sheetOptions?.templateContent
+      ? extractAltiumSchematicTemplate({
+          content: sheetOptions.templateContent,
+          projectContext: this.context.schematicProjectContext,
+        })
+      : undefined
+    const asciiContent = createSchematicDocument({
+      unitsPerCircuitUnit: this.context.schematicUnitsPerCircuitUnit,
+      childSheets: definition.childSheets,
+      circuitJson: this.input,
+      schematicSheetId: definition.schematicSheetId,
+      includeAllSchematicElements: definition.includeAllSchematicElements,
+      sheetSettings: sheetOptions,
+      template,
     })
-    this.finished = true
+    const schematics = this.context.schematics
+    if (!schematics) {
+      throw new Error("Schematic document stage was not initialized")
+    }
+    schematics.push({
+      asciiContent,
+      content: serializeAltiumSchDocToBinary(asciiContent, {
+        embeddedImages: template?.embeddedImages,
+        objectDefinitionRecords: createHairlinePowerPortDefinitions(
+          asciiContent,
+          this.context.schematicUnitsPerCircuitUnit / 20,
+        ),
+      }),
+      filename: definition.filename,
+    })
+    this.documentIndex++
+    this.finished = this.documentIndex >= this.documentDefinitions.length
   }
 
   getOutput(): AltiumSchematicFile[] {

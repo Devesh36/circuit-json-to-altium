@@ -373,11 +373,10 @@ export function createSchematicDocument({
     circuitToAltiumSchematicPrecisePoint,
     width: contentWidth,
     height: contentHeight,
-  } = getSchematicTransform(
-    schematicElements,
+  } = getSchematicTransform(schematicElements, {
     sheetSettings,
     unitsPerCircuitUnit,
-  )
+  })
   const sheetSymbolPlans = createAltiumSchematicSheetSymbolPlans({
     scale: scaleRatio,
     childSheets,

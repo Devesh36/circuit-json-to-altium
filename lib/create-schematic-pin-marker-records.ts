@@ -18,26 +18,34 @@ type PinArrowContext = {
   color: number
 }
 
-function point(
-  { body, dx, dy }: PinMarkerFrame,
-  along: number,
+function getPinMarkerPoint({
+  frame: { body, dx, dy },
+  along,
   across = 0,
-): Point {
+}: {
+  frame: PinMarkerFrame
+  along: number
+  across?: number
+}): Point {
   return {
     x: body.x + dx * along - dy * across,
     y: body.y + dy * along + dx * across,
   }
 }
 
-function addArrow(
-  { frame, records, arrowHalfWidth, ownerIndex, color }: PinArrowContext,
-  tip: number,
-  base: number,
-): void {
+function addArrow({
+  context: { frame, records, arrowHalfWidth, ownerIndex, color },
+  tip,
+  base,
+}: {
+  context: PinArrowContext
+  tip: number
+  base: number
+}): void {
   const points = [
-    point(frame, tip),
-    point(frame, base, arrowHalfWidth),
-    point(frame, base, -arrowHalfWidth),
+    getPinMarkerPoint({ frame, along: tip }),
+    getPinMarkerPoint({ frame, along: base, across: arrowHalfWidth }),
+    getPinMarkerPoint({ frame, along: base, across: -arrowHalfWidth }),
   ]
   records.push([
     "RECORD=7",
@@ -106,14 +114,26 @@ export function createSchematicPinMarkerRecords({
     ownerIndex,
     color,
   }
-  if (hasInputArrow) addArrow(arrowContext, bubbleEnd, bubbleEnd + arrowDepth)
+  if (hasInputArrow) {
+    addArrow({
+      context: arrowContext,
+      tip: bubbleEnd,
+      base: bubbleEnd + arrowDepth,
+    })
+  }
   // Circuit JSON places an output arrow one arrow-size beyond its base
   // origin; bidirectional pins put that origin after the input arrow.
   const outputTip = bubbleEnd + (hasInputArrow ? arrowDepth : 0) + arrowSize
   if (hasOutputArrow) {
     // Draw only the exposed gap; the wire must not cross a filled triangle.
-    const gapStart = point(frame, bubbleEnd + (hasInputArrow ? arrowDepth : 0))
-    const gapEnd = point(frame, outputTip - arrowDepth)
+    const gapStart = getPinMarkerPoint({
+      frame,
+      along: bubbleEnd + (hasInputArrow ? arrowDepth : 0),
+    })
+    const gapEnd = getPinMarkerPoint({
+      frame,
+      along: outputTip - arrowDepth,
+    })
     records.push([
       "RECORD=13",
       ...createOwnedSchematicRecordFields(ownerIndex),
@@ -124,7 +144,11 @@ export function createSchematicPinMarkerRecords({
       `LINEWIDTH=${ALTIUM_SCHEMATIC_HAIRLINE_WIDTH}`,
       `COLOR=${color}`,
     ])
-    addArrow(arrowContext, outputTip, outputTip - arrowDepth)
+    addArrow({
+      context: arrowContext,
+      tip: outputTip,
+      base: outputTip - arrowDepth,
+    })
   }
   // The stem starts outside the filled markers, keeping their interiors clear.
   const bodyOffset = hasOutputArrow

@@ -17,10 +17,18 @@ export class ValidateAltiumDocumentsStage extends ConverterStage<
       throw new Error("Every document stage must finish before validation")
     }
 
-    parseAltiumPcbDoc(pcb.asciiContent, { mode: "strict" })
-    parseAltiumBinaryPcbDoc(pcb.content)
-    for (const schematic of schematics) {
+    if (this.iteration === 1) {
+      parseAltiumPcbDoc(pcb.asciiContent, { mode: "strict" })
+      return
+    }
+    if (this.iteration === 2) {
+      parseAltiumBinaryPcbDoc(pcb.content)
+      return
+    }
+    const schematic = schematics[this.iteration - 3]
+    if (schematic) {
       parseAltiumSchDoc(schematic.content)
+      return
     }
     parseAltiumPrjPcb(project.content)
     this.context.validated = true

@@ -40,13 +40,16 @@ export const sanitizeField = (field: unknown): string => {
   return sanitizeAltiumFieldText(rawField).trim()
 }
 
+export const isWindowsReservedFilename = (filename: string): boolean =>
+  /^(?:aux|con|nul|prn|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(filename)
+
 export const sanitizeFilename = (filename: string): string => {
   const sanitizedFilename = filename
     .replace(/[^a-z0-9._-]+/giu, "-")
     .replace(/^[.-]+|[.-]+$/gu, "")
     .slice(0, 80)
   if (!sanitizedFilename) return "board"
-  if (/^(?:aux|con|nul|prn|com[1-9]|lpt[1-9])$/iu.test(sanitizedFilename)) {
+  if (isWindowsReservedFilename(sanitizedFilename)) {
     return `board-${sanitizedFilename}`
   }
   return sanitizedFilename

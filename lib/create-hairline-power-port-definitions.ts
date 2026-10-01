@@ -1,6 +1,36 @@
 import { parseAltiumSchDoc } from "altiumts"
 import { createAltiumSchematicCoordinateFields } from "./create-altium-schematic-coordinate-fields"
 
+type HairlineDefinitionRecordContext = {
+  color: number
+  definitions: string[]
+  ownerIndex: number
+  scale: number
+}
+
+function appendHairlineDefinitionRecord(
+  {
+    start,
+    end,
+  }: {
+    start: { x: number; y: number }
+    end: { x: number; y: number }
+  },
+  context: HairlineDefinitionRecordContext,
+): void {
+  const scaledStart = {
+    x: start.x * context.scale,
+    y: start.y * context.scale,
+  }
+  const scaledEnd = {
+    x: end.x * context.scale,
+    y: end.y * context.scale,
+  }
+  context.definitions.push(
+    `|RECORD=13|OwnerIndex=${context.ownerIndex}|OwnerPartId=-1|${[...createAltiumSchematicCoordinateFields("Location.X", scaledStart.x), ...createAltiumSchematicCoordinateFields("Location.Y", scaledStart.y), ...createAltiumSchematicCoordinateFields("Corner.X", scaledEnd.x), ...createAltiumSchematicCoordinateFields("Corner.Y", scaledEnd.y)].join("|")}|LineWidth=0|Color=${context.color}`,
+  )
+}
+
 export function getHairlinePowerPortDefinitionId(
   style: number,
   color: number,
@@ -30,23 +60,51 @@ export function createHairlinePowerPortDefinitions(
     definitions.push(
       `|RECORD=129|ObjectDefinitionId=${id}|LibReference=HairlinePower${style}|PartCount=2|CurrentPartId=1|DisplayModeCount=1|Location.X=0|Location.Y=0|OwnerPartId=-1`,
     )
-    const line = (x1: number, y1: number, x2: number, y2: number) => {
-      x1 *= scale
-      y1 *= scale
-      x2 *= scale
-      y2 *= scale
-      definitions.push(
-        `|RECORD=13|OwnerIndex=${owner}|OwnerPartId=-1|${[...createAltiumSchematicCoordinateFields("Location.X", x1), ...createAltiumSchematicCoordinateFields("Location.Y", y1), ...createAltiumSchematicCoordinateFields("Corner.X", x2), ...createAltiumSchematicCoordinateFields("Corner.Y", y2)].join("|")}|LineWidth=0|Color=${color}`,
-      )
-    }
+    const hairlineContext = { color, definitions, ownerIndex: owner, scale }
     if (style === 2) {
-      line(0, 0, 10, 0)
-      line(10, -5, 10, 5)
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 0, y: 0 },
+          end: { x: 10, y: 0 },
+        },
+        hairlineContext,
+      )
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 10, y: -5 },
+          end: { x: 10, y: 5 },
+        },
+        hairlineContext,
+      )
     } else if (style === 4) {
-      line(0, 0, 4, 0)
-      line(4, -7, 4, 7)
-      line(8, -4.5, 8, 4.5)
-      line(12, -2, 12, 2)
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 0, y: 0 },
+          end: { x: 4, y: 0 },
+        },
+        hairlineContext,
+      )
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 4, y: -7 },
+          end: { x: 4, y: 7 },
+        },
+        hairlineContext,
+      )
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 8, y: -4.5 },
+          end: { x: 8, y: 4.5 },
+        },
+        hairlineContext,
+      )
+      appendHairlineDefinitionRecord(
+        {
+          start: { x: 12, y: -2 },
+          end: { x: 12, y: 2 },
+        },
+        hairlineContext,
+      )
     }
   }
   return definitions

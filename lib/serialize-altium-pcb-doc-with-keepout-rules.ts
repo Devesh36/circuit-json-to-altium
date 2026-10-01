@@ -68,7 +68,7 @@ export function serializeAltiumPcbDocWithKeepoutRules(
       const union = record.getNumber("UNIONINDEX")
       const payload = bytes.slice(offset + 5, end)
       const updated =
-        union === undefined ? payload : addUnion(payload, kind, union)
+        union === undefined ? payload : addUnion({ payload, kind, union })
       const frame = new Uint8Array(5 + updated.length)
       frame[0] = bytes[offset]!
       new DataView(frame.buffer).setUint32(1, updated.length, true)
@@ -86,11 +86,15 @@ export function serializeAltiumPcbDocWithKeepoutRules(
   )
 }
 
-function addUnion(
-  payload: Uint8Array,
-  kind: string,
-  union: number,
-): Uint8Array {
+function addUnion({
+  payload,
+  kind,
+  union,
+}: {
+  payload: Uint8Array
+  kind: string
+  union: number
+}): Uint8Array {
   if (!Number.isInteger(union) || union <= 0 || union > 0xffffffff)
     throw new Error("Invalid keepout union index")
   if (kind === "Region") {

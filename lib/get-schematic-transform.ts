@@ -19,6 +19,11 @@ type SchematicTransform = {
   width: number
 }
 
+type SchematicTransformOptions = {
+  sheetSettings?: AltiumSchematicSheetSettings
+  unitsPerCircuitUnit?: number
+}
+
 const MINIMUM_ALTIUM_SHEET_HEIGHT = 300
 const MINIMUM_ALTIUM_SHEET_WIDTH = 400
 const SCHEMATIC_CONTENT_MARGIN = 100
@@ -80,8 +85,7 @@ function appendSchematicSymbolPrimitivePoints({
 
 export function getSchematicTransform(
   schematicElements: CircuitElement[],
-  sheetSettings?: AltiumSchematicSheetSettings,
-  unitsPerCircuitUnit = 20,
+  { sheetSettings, unitsPerCircuitUnit = 20 }: SchematicTransformOptions = {},
 ): SchematicTransform {
   const scaleRatio = unitsPerCircuitUnit / 20
   const circuitPoints: Point[] = []

@@ -45,29 +45,40 @@ function parallel(a: SchematicWireSegment, b: SchematicWireSegment): boolean {
 
 const COORDINATE_TICKS = 100_000
 
+function convertPointToTicks({ x, y }: Point): Point {
+  const pointInTicks = {
+    x: Math.round(x * COORDINATE_TICKS),
+    y: Math.round(y * COORDINATE_TICKS),
+  }
+  if (
+    !Number.isSafeInteger(pointInTicks.x) ||
+    !Number.isSafeInteger(pointInTicks.y)
+  ) {
+    throw new RangeError("Invalid schematic wire coordinate")
+  }
+  return pointInTicks
+}
+
+function convertPointFromTicks({ x, y }: Point): Point {
+  return {
+    x: x / COORDINATE_TICKS,
+    y: y / COORDINATE_TICKS,
+  }
+}
+
 // Label leaders can contain native fractional coordinates. Work in exact ticks
 // and retain the first contributing segment's metadata when coalescing wires.
 export function normalizeSchematicWireSegments<T extends SchematicWireSegment>(
   source: T[],
   connectionSegments: SchematicWireSegment[] = source,
 ): T[] {
-  const toTicks = ({ x, y }: Point): Point => {
-    const point = {
-      x: Math.round(x * COORDINATE_TICKS),
-      y: Math.round(y * COORDINATE_TICKS),
-    }
-    if (!Number.isSafeInteger(point.x) || !Number.isSafeInteger(point.y)) {
-      throw new RangeError("Invalid schematic wire coordinate")
-    }
-    return point
-  }
   const segments = source.map(({ from, to }) => ({
-    from: toTicks(from),
-    to: toTicks(to),
+    from: convertPointToTicks(from),
+    to: convertPointToTicks(to),
   }))
   const connections = connectionSegments.map(({ from, to }) => ({
-    from: toTicks(from),
-    to: toTicks(to),
+    from: convertPointToTicks(from),
+    to: convertPointToTicks(to),
   }))
   const groups = new Map<SchematicWireLineKey, Interval[]>()
   for (const [inputIndex, { from, to }] of segments.entries()) {
@@ -160,14 +171,10 @@ export function normalizeSchematicWireSegments<T extends SchematicWireSegment>(
     )
     splits.sort((a, b) => (a.x - b.x) * dx + (a.y - b.y) * dy)
     const points = [segment.from, ...splits, segment.to]
-    const fromTicks = ({ x, y }: Point): Point => ({
-      x: x / COORDINATE_TICKS,
-      y: y / COORDINATE_TICKS,
-    })
     return points.slice(1).map((to, index) => ({
       ...source[segment.inputIndex]!,
-      from: fromTicks(points[index]!),
-      to: fromTicks(to),
+      from: convertPointFromTicks(points[index]!),
+      to: convertPointFromTicks(to),
     }))
   })
 }

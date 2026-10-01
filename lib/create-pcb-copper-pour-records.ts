@@ -28,7 +28,22 @@ type CreatePcbCopperPourRecordsOptions = {
 
 type AltiumPolygonRole = "outline" | "region"
 
+type PolygonIdAllocatorContext = {
+  nextGeneratedPolygonId: number
+  usedPolygonIds: Set<number>
+}
+
 const MAXIMUM_ARC_STEP_RADIANS = Math.PI / 24
+
+function allocatePolygonId(context: PolygonIdAllocatorContext): number {
+  while (context.usedPolygonIds.has(context.nextGeneratedPolygonId)) {
+    context.nextGeneratedPolygonId++
+  }
+  const polygonId = context.nextGeneratedPolygonId
+  context.usedPolygonIds.add(polygonId)
+  context.nextGeneratedPolygonId++
+  return polygonId
+}
 
 export function createPcbCopperPourRecords({
   circuitJson,
@@ -64,22 +79,16 @@ export function createPcbCopperPourRecords({
       polygonId === undefined ? [] : [polygonId],
     ),
   )
-  let nextGeneratedPolygonId = 0
-
-  const allocatePolygonId = (): number => {
-    while (usedPolygonIds.has(nextGeneratedPolygonId)) {
-      nextGeneratedPolygonId++
-    }
-    const polygonId = nextGeneratedPolygonId
-    usedPolygonIds.add(polygonId)
-    nextGeneratedPolygonId++
-    return polygonId
+  const polygonIdAllocatorContext: PolygonIdAllocatorContext = {
+    nextGeneratedPolygonId: 0,
+    usedPolygonIds,
   }
 
   for (const entry of copperPours) {
     const { copperPour, pcbComponentId, polygonCutoutCount, polygonRole } =
       entry
-    const polygonId = entry.polygonId ?? allocatePolygonId()
+    const polygonId =
+      entry.polygonId ?? allocatePolygonId(polygonIdAllocatorContext)
     const circuitRings = getCopperPourRings(copperPour)
     const altiumRings = {
       outerRing: circuitRings.outerRing.map(circuitToAltiumPcbPoint),
