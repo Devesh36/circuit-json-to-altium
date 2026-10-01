@@ -80,6 +80,6 @@ test("exports smallest schematic strokes with unchanged text fonts", async () =>
   const pixelsPerUnit = Math.min(width / viewBox[2]!, height / viewBox[3]!)
   for (const tag of graphicTags) {
     const strokeWidth = Number(tag.match(/stroke-width="([^"]+)"/u)![1])
-    expect(strokeWidth * pixelsPerUnit).toBeCloseTo(0.5, 3)
+    expect(strokeWidth * pixelsPerUnit).toBeCloseTo(1, 3)
   }
 })

@@ -78,7 +78,6 @@ type SchematicSheetMembershipParams = {
 type SchematicRecordContext = {
   lines: string[]
   nextRecordIndex: number
-  encodeFractionalCoordinates: boolean
 }
 
 type AltiumSchematicPointKey = string
@@ -300,23 +299,21 @@ function addSchematicRecord(
   ctx: SchematicRecordContext,
 ): number {
   const altiumRecordIndex = ctx.nextRecordIndex
-  if (ctx.encodeFractionalCoordinates) {
-    recordFields = recordFields.flatMap((field) => {
-      const match =
-        /^((?:LOCATION|CORNER)\.[XY]|[XY]\d+|RADIUS|SECONDARYRADIUS|PINLENGTH|WIDTH|HEIGHT|XSIZE|YSIZE|DISTANCEFROMTOP)=([+-]?[\d.]+)$/iu.exec(
-          field,
-        )
-      if (!match || Number.isInteger(Number(match[2]))) return [field]
-      if (match[1] === "DISTANCEFROMTOP") {
-        // Sheet entries use 10-unit bases and _FRAC1 in 1/100,000 units.
-        const ticks = Math.round(Number(match[2]) * 1_000_000)
-        const base = Math.trunc(ticks / 1_000_000)
-        const fraction = ticks - base * 1_000_000
-        return [`DISTANCEFROMTOP=${base}`, `DISTANCEFROMTOP_FRAC1=${fraction}`]
-      }
-      return createAltiumSchematicCoordinateFields(match[1]!, Number(match[2]))
-    })
-  }
+  recordFields = recordFields.flatMap((field) => {
+    const match =
+      /^((?:LOCATION|CORNER)\.[XY]|[XY]\d+|RADIUS|SECONDARYRADIUS|PINLENGTH|WIDTH|HEIGHT|XSIZE|YSIZE|DISTANCEFROMTOP)=([+-]?[\d.]+)$/iu.exec(
+        field,
+      )
+    if (!match || Number.isInteger(Number(match[2]))) return [field]
+    if (match[1] === "DISTANCEFROMTOP") {
+      // Sheet entries use 10-unit bases and _FRAC1 in 1/100,000 units.
+      const ticks = Math.round(Number(match[2]) * 1_000_000)
+      const base = Math.trunc(ticks / 1_000_000)
+      const fraction = ticks - base * 1_000_000
+      return [`DISTANCEFROMTOP=${base}`, `DISTANCEFROMTOP_FRAC1=${fraction}`]
+    }
+    return createAltiumSchematicCoordinateFields(match[1]!, Number(match[2]))
+  })
   ctx.lines.push(`|${recordFields.join("|")}`)
   ctx.nextRecordIndex++
   return altiumRecordIndex
@@ -486,7 +483,6 @@ export function createSchematicDocument({
       "|HEADER=Protel for Windows - Schematic Capture Ascii File Version 5.0",
     ],
     nextRecordIndex: 0,
-    encodeFractionalCoordinates: unitsPerCircuitUnit !== 20,
   }
   addSchematicRecord(
     [
