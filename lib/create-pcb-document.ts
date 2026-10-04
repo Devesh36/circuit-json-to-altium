@@ -23,6 +23,7 @@ import {
   pointsEqual,
   sanitizeField,
 } from "./format"
+import { getAltiumPcbTrackLayer } from "./get-altium-pcb-track-layer"
 import { getBoardOutline } from "./get-board-outline"
 import type {
   CircuitElement,
@@ -395,13 +396,12 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         y: asNumber(circuitRouteEnd.y),
       })
       if (pointsEqual(altiumStartPoint, altiumEndPoint)) continue
-      const routeLayer =
+      const routeLayer = getAltiumPcbTrackLayer(
         asString(
           circuitRouteEnd.layer,
-          asString(circuitRouteStart.layer),
-        ).toLowerCase() === "bottom"
-          ? "BOTTOM"
-          : "TOP"
+          asString(circuitRouteStart.layer, "top"),
+        ),
+      )
       lines.push(
         [
           "|RECORD=Track",

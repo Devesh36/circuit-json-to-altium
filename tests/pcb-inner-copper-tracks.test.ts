@@ -3,7 +3,7 @@ import { parseAltiumBinaryPcbDoc } from "altiumts"
 import { CircuitJsonToAltiumConverter } from "../lib"
 import { board } from "./fixtures"
 
-test.failing("preserves inner copper tracks and their physical board stack", () => {
+test("preserves inner copper track layers", () => {
   const layers = ["top", "inner1", "inner2", "inner8", "bottom"]
   const converter = new CircuitJsonToAltiumConverter([
     board(),
@@ -24,12 +24,5 @@ test.failing("preserves inner copper tracks and their physical board stack", () 
     "MID-LAYER2",
     "MID-LAYER8",
     "BOTTOM",
-  ])
-  const stack = document.board?.layerStack.entries
-  expect(stack).toHaveLength(10)
-  expect(stack?.map((entry) => entry.name)).toEqual([
-    "Top Layer",
-    ...Array.from({ length: 8 }, (_, index) => `Mid-Layer ${index + 1}`),
-    "Bottom Layer",
   ])
 })

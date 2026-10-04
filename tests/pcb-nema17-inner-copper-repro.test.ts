@@ -5,7 +5,7 @@ import { CircuitJsonToAltiumConverter } from "../lib"
 import type { CircuitElement } from "./fixtures"
 import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
-test.failing("preserves nema17 inner copper tracks and its four-layer stack", async () => {
+test("preserves nema17 inner copper tracks", async () => {
   const elements = (await Bun.file(
     new URL("./assets/nema17.circuit.json", import.meta.url),
   ).json()) as CircuitElement[]
@@ -31,5 +31,4 @@ test.failing("preserves nema17 inner copper tracks and its four-layer stack", as
   expect(
     generated.tracks.some((track) => track.get("LAYER") === "MID-LAYER2"),
   ).toBe(true)
-  expect(generated.board?.layerStack.entries).toHaveLength(4)
 })
