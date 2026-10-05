@@ -11,7 +11,12 @@ export function getAltiumPcbHoleGeometry({
   heightMm: number
   holeCcwRotationDegrees: number
   padCcwRotationDegrees: number
-}) {
+}): {
+  shape: "SLOT" | "ROUND"
+  sizeMm: number
+  lengthMm: number
+  rotationDegrees: number
+} {
   const isSlot = Math.abs(widthMm - heightMm) > 1e-9
   // Altium's unrotated slot extends along X. A taller Circuit JSON pill
   // extends along Y before its own rotation is applied.
