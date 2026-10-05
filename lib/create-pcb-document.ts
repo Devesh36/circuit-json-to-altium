@@ -364,7 +364,7 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
           ? []
           : [`COMPONENT=${altiumComponentIndex}`]),
         "LAYER=MULTILAYER",
-        `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(asNumber(hole.ccw_rotation)))}`,
+        `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(padCcwRotationDegrees))}`,
         `NAME=NPTH-${holeIndex + 1}`,
         `HOLESIZE=${formatMil(holeGeometry.sizeMm * MILLIMETERS_TO_MILS)}`,
         `HOLEWIDTH=${formatMil(holeGeometry.lengthMm * MILLIMETERS_TO_MILS)}`,

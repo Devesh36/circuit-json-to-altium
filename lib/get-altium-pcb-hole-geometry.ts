@@ -18,18 +18,19 @@ export function getAltiumPcbHoleGeometry({
   rotationDegrees: number
 } {
   const isSlot = Math.abs(widthMm - heightMm) > 1e-9
-  // Altium's unrotated slot extends along X. A taller Circuit JSON pill
-  // extends along Y before its own rotation is applied.
-  const localLongAxisDegrees = heightMm > widthMm ? 90 : 0
-  const worldLongAxisDegrees = holeCcwRotationDegrees + localLongAxisDegrees
+  let rotationDegrees = holeCcwRotationDegrees
+  if (isSlot) {
+    // Altium slots extend along X and rotate relative to the copper pad.
+    rotationDegrees =
+      holeCcwRotationDegrees +
+      (heightMm > widthMm ? 90 : 0) -
+      padCcwRotationDegrees
+  }
   return {
     shape: isSlot ? "SLOT" : "ROUND",
     sizeMm: Math.min(widthMm, heightMm),
     lengthMm: Math.max(widthMm, heightMm),
-    rotationDegrees: convertCircuitPcbCcwRotationDegreesToAltium(
-      isSlot
-        ? worldLongAxisDegrees - padCcwRotationDegrees
-        : holeCcwRotationDegrees,
-    ),
+    rotationDegrees:
+      convertCircuitPcbCcwRotationDegreesToAltium(rotationDegrees),
   }
 }
