@@ -304,6 +304,12 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     const padCcwRotationDegrees = asNumber(
       hasIndependentPadRotation ? hole.rect_ccw_rotation : hole.ccw_rotation,
     )
+    // Altium slots extend along X and rotate relative to the copper pad.
+    const relativeHoleRotation = isSlotted
+      ? holeCcwRotationDegrees +
+        (holeHeight > holeWidth ? 90 : 0) -
+        padCcwRotationDegrees
+      : holeCcwRotationDegrees
     const isRoundedRectPad =
       hasIndependentPadRotation &&
       asPositiveNumber(hole.rect_border_radius, 0) >=
@@ -321,7 +327,7 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         `HOLESIZE=${formatMil(Math.min(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
         `HOLEWIDTH=${formatMil(Math.max(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
         `HOLESHAPE=${isSlotted ? "SLOT" : "ROUND"}`,
-        `HOLEROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(holeCcwRotationDegrees))}`,
+        `HOLEROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(relativeHoleRotation))}`,
         "PLATED=TRUE",
         "LOCKED=FALSE",
         `X=${formatMil(altiumCenter.x)}`,
@@ -345,6 +351,9 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     const holeWidth = asPositiveNumber(hole.hole_width, diameter)
     const holeHeight = asPositiveNumber(hole.hole_height, diameter)
     const isSlotted = Math.abs(holeWidth - holeHeight) > 1e-9
+    const padCcwRotationDegrees = asNumber(hole.ccw_rotation)
+    let relativeHoleRotation = padCcwRotationDegrees
+    if (isSlotted) relativeHoleRotation = holeHeight > holeWidth ? 90 : 0
     lines.push(
       [
         "|RECORD=Pad",
@@ -352,12 +361,12 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
           ? []
           : [`COMPONENT=${altiumComponentIndex}`]),
         "LAYER=MULTILAYER",
-        `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(asNumber(hole.ccw_rotation)))}`,
+        `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(padCcwRotationDegrees))}`,
         `NAME=NPTH-${holeIndex + 1}`,
         `HOLESIZE=${formatMil(Math.min(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
         `HOLEWIDTH=${formatMil(Math.max(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
         `HOLESHAPE=${isSlotted ? "SLOT" : "ROUND"}`,
-        `HOLEROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(asNumber(hole.ccw_rotation)))}`,
+        `HOLEROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(relativeHoleRotation))}`,
         "PLATED=FALSE",
         "LOCKED=FALSE",
         `X=${formatMil(altiumCenter.x)}`,
