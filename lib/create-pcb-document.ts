@@ -7,6 +7,7 @@ import { createPcbCutoutRecords } from "./create-pcb-cutout-records"
 import { createPcbDocumentationRecords } from "./create-pcb-documentation-records"
 import { createPcbKeepoutRecords } from "./create-pcb-keepout-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
+import { createPcbSilkscreenCircleRecords } from "./create-pcb-silkscreen-circle-records"
 import { createPcbSilkscreenGraphicRecords } from "./create-pcb-silkscreen-graphic-records"
 import { createPcbSilkscreenLineRecords } from "./create-pcb-silkscreen-line-records"
 import { createPcbSilkscreenTextRecord } from "./create-pcb-silkscreen-text-record"
@@ -497,6 +498,11 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
   }
 
   lines.push(
+    ...createPcbSilkscreenCircleRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
     ...createPcbSilkscreenGraphicRecords({
       circuitJson,
       circuitToAltiumPcbPoint,
