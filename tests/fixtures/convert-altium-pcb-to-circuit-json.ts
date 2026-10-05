@@ -807,10 +807,12 @@ export function convertAltiumPcbToCircuitJson(
 
     const isSlotted = Math.abs(holeWidthMils - holeSizeMils) > 1e-9
     const holeRotation = toCircuitRotation(
-      (isSlotted ? pad.getNumber("SLOTROTATION") : undefined) ??
-        pad.getNumber("HOLEROTATION") ??
-        pad.getNumber("ROTATION") ??
-        0,
+      isSlotted
+        ? rotation +
+            (pad.getNumber("SLOTROTATION") ??
+              pad.getNumber("HOLEROTATION") ??
+              0)
+        : (pad.getNumber("HOLEROTATION") ?? rotation),
     )
     const holeFields = {
       ...commonFields,

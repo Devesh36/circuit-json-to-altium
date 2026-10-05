@@ -153,10 +153,10 @@ function getCopperPourComponentMismatchCount(
 }
 
 const platedHoleDimensionFields = [
-  "hole_width",
-  "hole_height",
-  "outer_width",
-  "outer_height",
+  ["hole_width"],
+  ["hole_height"],
+  ["outer_width", "rect_pad_width"],
+  ["outer_height", "rect_pad_height"],
 ] as const
 
 function getPlatedHoleDimensionMismatchCount(
@@ -175,9 +175,13 @@ function getPlatedHoleDimensionMismatchCount(
   return sourceHoles.reduce((mismatchCount, sourceHole, holeIndex) => {
     const roundTripHole = roundTripHoles[holeIndex]
     if (!roundTripHole) return mismatchCount + 1
-    const dimensionsMatch = platedHoleDimensionFields.every((fieldName) => {
-      const sourceDimension = sourceHole[fieldName]
-      const roundTripDimension = roundTripHole[fieldName]
+    const dimensionsMatch = platedHoleDimensionFields.every((fieldNames) => {
+      const sourceDimension = fieldNames
+        .map((field) => sourceHole[field])
+        .find((value) => typeof value === "number")
+      const roundTripDimension = fieldNames
+        .map((field) => roundTripHole[field])
+        .find((value) => typeof value === "number")
       return (
         typeof sourceDimension === "number" &&
         typeof roundTripDimension === "number" &&

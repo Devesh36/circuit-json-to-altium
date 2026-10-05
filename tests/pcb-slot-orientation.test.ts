@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
+import { parseAltiumPcbDoc } from "altiumts"
 import { board, type CircuitElement, extractArchive } from "./fixtures"
+import { convertAltiumPcbToCircuitJson } from "./fixtures/convert-altium-pcb-to-circuit-json"
+import { getPcbRoundTripMetrics } from "./fixtures/get-pcb-round-trip-metrics"
 
 const getWorldSlotAngle = (pad: {
   getNumber: (key: string) => number | undefined
@@ -87,4 +90,43 @@ test("preserves horizontal, vertical, and independently rotated slot axes", asyn
   expect(pads).toHaveLength(expectedAngles.length)
   for (const [index, pad] of pads.entries())
     expect(getWorldSlotAngle(pad)).toBeCloseTo(expectedAngles[index]!, 6)
+})
+
+test("round-trips native pad-relative slot rotation through the import fixture", async () => {
+  const source = parseAltiumPcbDoc(
+    [
+      "|RECORD=Board|VX0=0mil|VY0=0mil|VX1=1000mil|VY1=0mil|VX2=1000mil|VY2=1000mil|VX3=0mil|VY3=1000mil",
+      "|RECORD=Pad|LAYER=MULTILAYER|X=200mil|Y=200mil|XSIZE=100mil|YSIZE=120mil|SHAPE=RECTANGLE|HOLESIZE=30mil|HOLEWIDTH=60mil|HOLESHAPE=SLOT|ROTATION=25|HOLEROTATION=35|PLATED=TRUE",
+      "|RECORD=Pad|LAYER=MULTILAYER|X=400mil|Y=200mil|XSIZE=60mil|YSIZE=30mil|SHAPE=RECTANGLE|HOLESIZE=30mil|HOLEWIDTH=60mil|HOLESHAPE=SLOT|ROTATION=25|HOLEROTATION=35|PLATED=FALSE",
+    ].join("\n"),
+  )
+  const sourceCircuitJson = convertAltiumPcbToCircuitJson(
+    source,
+  ) as CircuitElement[]
+  const plated = sourceCircuitJson.find(
+    (element) => element.type === "pcb_plated_hole",
+  )!
+  const unplated = sourceCircuitJson.find(
+    (element) => element.type === "pcb_hole",
+  )!
+  expect(plated.hole_ccw_rotation).toBe(60)
+  expect(plated.rect_ccw_rotation).toBe(25)
+  expect(unplated.ccw_rotation).toBe(60)
+  const { pcb } = await extractArchive(sourceCircuitJson)
+  for (const pad of pcb.getRecordsByKind("Pad"))
+    expect(getWorldSlotAngle(pad)).toBe(60)
+  const roundTripCircuitJson = convertAltiumPcbToCircuitJson(pcb)
+  expect(
+    getPcbRoundTripMetrics({ sourceCircuitJson, roundTripCircuitJson })
+      .platedHoleDimensionMismatchCount,
+  ).toBe(0)
+  const resized = roundTripCircuitJson.map((element) =>
+    element.type === "pcb_plated_hole"
+      ? { ...element, rect_pad_width: 5 }
+      : element,
+  )
+  expect(
+    getPcbRoundTripMetrics({ sourceCircuitJson, roundTripCircuitJson: resized })
+      .platedHoleDimensionMismatchCount,
+  ).toBe(1)
 })
