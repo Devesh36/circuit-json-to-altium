@@ -39,28 +39,32 @@ test("preserves horizontal, vertical, and independently rotated slot axes", asyn
   const elements: CircuitElement[] = [board()]
   const expectedAngles: number[] = []
   for (const type of ["pcb_plated_hole", "pcb_hole"]) {
-    for (const [width, height] of [
-      [1.6, 0.8],
-      [0.8, 1.6],
+    for (const [width, height, rotation, expectedAngle] of [
+      [1.6, 0.8, 0, 0],
+      [1.6, 0.8, 30, 30],
+      [1.6, 0.8, 90, 90],
+      [1.6, 0.8, 180, 0],
+      [1.6, 0.8, -45, 135],
+      [0.8, 1.6, 0, 90],
+      [0.8, 1.6, 30, 120],
+      [0.8, 1.6, 90, 0],
+      [0.8, 1.6, 180, 90],
+      [0.8, 1.6, -45, 45],
     ] as const) {
-      for (const rotation of [0, 30, 90, 180, -45]) {
-        elements.push({
-          type,
-          [`${type}_id`]: `${type}-${elements.length}`,
-          shape: "pill",
-          hole_shape: "pill",
-          x: 0,
-          y: 0,
-          hole_width: width,
-          hole_height: height,
-          outer_width: 2,
-          outer_height: 2,
-          ccw_rotation: rotation,
-        })
-        expectedAngles.push(
-          (((rotation + (height > width ? 90 : 0)) % 180) + 180) % 180,
-        )
-      }
+      elements.push({
+        type,
+        [`${type}_id`]: `${type}-${elements.length}`,
+        shape: "pill",
+        hole_shape: "pill",
+        x: 0,
+        y: 0,
+        hole_width: width,
+        hole_height: height,
+        outer_width: 2,
+        outer_height: 2,
+        ccw_rotation: rotation,
+      })
+      expectedAngles.push(expectedAngle)
     }
   }
   elements.push({

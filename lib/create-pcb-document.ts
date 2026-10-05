@@ -24,6 +24,7 @@ import {
   pointsEqual,
   sanitizeField,
 } from "./format"
+import { getAltiumPcbHoleGeometry } from "./get-altium-pcb-hole-geometry"
 import { getAltiumPcbTrackLayer } from "./get-altium-pcb-track-layer"
 import { getBoardOutline } from "./get-board-outline"
 import type {
@@ -297,19 +298,18 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       asPositiveNumber(hole.hole_diameter, 0.8),
     )
     const holeHeight = asPositiveNumber(hole.hole_height, holeWidth)
-    const isSlotted = Math.abs(holeWidth - holeHeight) > 1e-9
     const holeCcwRotationDegrees = asNumber(
       hasIndependentPadRotation ? hole.hole_ccw_rotation : hole.ccw_rotation,
     )
     const padCcwRotationDegrees = asNumber(
       hasIndependentPadRotation ? hole.rect_ccw_rotation : hole.ccw_rotation,
     )
-    // Altium rotates the slot relative to its pad, with its long axis along X.
-    const relativeHoleRotation = isSlotted
-      ? holeCcwRotationDegrees +
-        (holeHeight > holeWidth ? 90 : 0) -
-        padCcwRotationDegrees
-      : holeCcwRotationDegrees
+    const holeGeometry = getAltiumPcbHoleGeometry({
+      widthMm: holeWidth,
+      heightMm: holeHeight,
+      holeCcwRotationDegrees,
+      padCcwRotationDegrees,
+    })
     const isRoundedRectPad =
       hasIndependentPadRotation &&
       asPositiveNumber(hole.rect_border_radius, 0) >=
@@ -324,10 +324,10 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         "LAYER=MULTILAYER",
         `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(padCcwRotationDegrees))}`,
         `NAME=${getPadName(hole, padLookupContext)}`,
-        `HOLESIZE=${formatMil(Math.min(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
-        `HOLEWIDTH=${formatMil(Math.max(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
-        `HOLESHAPE=${isSlotted ? "SLOT" : "ROUND"}`,
-        `HOLEROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(relativeHoleRotation))}`,
+        `HOLESIZE=${formatMil(holeGeometry.sizeMm * MILLIMETERS_TO_MILS)}`,
+        `HOLEWIDTH=${formatMil(holeGeometry.lengthMm * MILLIMETERS_TO_MILS)}`,
+        `HOLESHAPE=${holeGeometry.shape}`,
+        `HOLEROTATION=${formatNumber(holeGeometry.rotationDegrees)}`,
         "PLATED=TRUE",
         "LOCKED=FALSE",
         `X=${formatMil(altiumCenter.x)}`,
@@ -350,7 +350,13 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     const diameter = asPositiveNumber(hole.hole_diameter, 1)
     const holeWidth = asPositiveNumber(hole.hole_width, diameter)
     const holeHeight = asPositiveNumber(hole.hole_height, diameter)
-    const isSlotted = Math.abs(holeWidth - holeHeight) > 1e-9
+    const padCcwRotationDegrees = asNumber(hole.ccw_rotation)
+    const holeGeometry = getAltiumPcbHoleGeometry({
+      widthMm: holeWidth,
+      heightMm: holeHeight,
+      holeCcwRotationDegrees: padCcwRotationDegrees,
+      padCcwRotationDegrees,
+    })
     lines.push(
       [
         "|RECORD=Pad",
@@ -360,15 +366,15 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
         "LAYER=MULTILAYER",
         `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(asNumber(hole.ccw_rotation)))}`,
         `NAME=NPTH-${holeIndex + 1}`,
-        `HOLESIZE=${formatMil(Math.min(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
-        `HOLEWIDTH=${formatMil(Math.max(holeWidth, holeHeight) * MILLIMETERS_TO_MILS)}`,
-        `HOLESHAPE=${isSlotted ? "SLOT" : "ROUND"}`,
-        `HOLEROTATION=${formatNumber(isSlotted ? (holeHeight > holeWidth ? 90 : 0) : convertCircuitPcbCcwRotationDegreesToAltium(asNumber(hole.ccw_rotation)))}`,
+        `HOLESIZE=${formatMil(holeGeometry.sizeMm * MILLIMETERS_TO_MILS)}`,
+        `HOLEWIDTH=${formatMil(holeGeometry.lengthMm * MILLIMETERS_TO_MILS)}`,
+        `HOLESHAPE=${holeGeometry.shape}`,
+        `HOLEROTATION=${formatNumber(holeGeometry.rotationDegrees)}`,
         "PLATED=FALSE",
         "LOCKED=FALSE",
         `X=${formatMil(altiumCenter.x)}`,
         `Y=${formatMil(altiumCenter.y)}`,
-        `SHAPE=${isSlotted ? "RECTANGLE" : "ROUND"}`,
+        `SHAPE=${holeGeometry.shape === "SLOT" ? "RECTANGLE" : "ROUND"}`,
         `XSIZE=${formatMil(holeWidth * MILLIMETERS_TO_MILS)}`,
         `YSIZE=${formatMil(holeHeight * MILLIMETERS_TO_MILS)}`,
       ].join("|"),
