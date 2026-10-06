@@ -285,12 +285,15 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     const hasIndependentPadRotation =
       hole.shape === "rotated_pill_hole_with_rect_pad"
     const outerWidth = asPositiveNumber(
-      hasIndependentPadRotation ? hole.rect_pad_width : hole.outer_width,
-      asPositiveNumber(hole.outer_diameter, 1.6),
+      hole.rect_pad_width,
+      asPositiveNumber(
+        hole.outer_width,
+        asPositiveNumber(hole.outer_diameter, 1.6),
+      ),
     )
     const outerHeight = asPositiveNumber(
-      hasIndependentPadRotation ? hole.rect_pad_height : hole.outer_height,
-      outerWidth,
+      hole.rect_pad_height,
+      asPositiveNumber(hole.outer_height, outerWidth),
     )
     const holeWidth = asPositiveNumber(
       hole.hole_width,
