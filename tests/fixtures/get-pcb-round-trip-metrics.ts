@@ -17,6 +17,7 @@ const preservedPrimitiveTypes = [
   "pcb_silkscreen_text",
   "pcb_cutout",
   "pcb_silkscreen_graphic",
+  "pcb_silkscreen_rect",
   "pcb_courtyard_outline",
   "pcb_keepout",
   "pcb_fabrication_note_path",
@@ -36,6 +37,7 @@ const geometryElementTypes = [
   "pcb_trace",
   "pcb_via",
   "pcb_silkscreen_text",
+  "pcb_silkscreen_rect",
 ] as const
 
 const rotationElementTypes = [
@@ -44,6 +46,7 @@ const rotationElementTypes = [
   "pcb_plated_hole",
   "pcb_hole",
   "pcb_silkscreen_text",
+  "pcb_silkscreen_rect",
 ] as const
 
 type PreservedPrimitiveType = (typeof preservedPrimitiveTypes)[number]
@@ -352,7 +355,8 @@ function getGeometryPoints(
       continue
     }
     if (
-      elementType === "pcb_component" &&
+      (elementType === "pcb_component" ||
+        elementType === "pcb_silkscreen_rect") &&
       typeof element.center === "object" &&
       element.center !== null &&
       "x" in element.center &&

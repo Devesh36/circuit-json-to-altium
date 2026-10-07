@@ -629,6 +629,32 @@ function appendSilkscreenGraphicElements({
   document: AltiumPcbDocument
   elements: CircuitElement[]
 }): void {
+  const fills = document
+    .getRecordsByKind("Fill")
+    .filter((fill) => isOverlayLayer(fill.getDecoded("LAYER")))
+  for (const [fillIndex, fill] of fills.entries()) {
+    const start = getPoint(fill, "X1", "Y1")
+    const end = getPoint(fill, "X2", "Y2")
+    if (!start || !end) continue
+    const width = toCircuitLength(Math.abs(end.x - start.x))
+    const height = toCircuitLength(Math.abs(end.y - start.y))
+    elements.push({
+      type: "pcb_silkscreen_rect",
+      pcb_silkscreen_rect_id: `pcb_silkscreen_rect_${fillIndex}`,
+      pcb_component_id: getOwnedComponentId(document, componentIds, fill) ?? "",
+      center: toCircuitPoint({
+        x: (start.x + end.x) / 2,
+        y: (start.y + end.y) / 2,
+      }),
+      width,
+      height,
+      stroke_width: Math.min(width, height),
+      is_filled: true,
+      has_stroke: false,
+      ccw_rotation: toCircuitRotation(fill.getNumber("ROTATION") ?? 0),
+      layer: toCircuitLayer(fill.getDecoded("LAYER")),
+    })
+  }
   const regions = document
     .getRecordsByKind("Region")
     .filter((region) => isOverlayLayer(region.getDecoded("LAYER")))
