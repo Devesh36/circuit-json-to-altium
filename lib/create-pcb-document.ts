@@ -306,7 +306,9 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       hasIndependentPadRotation ? hole.hole_ccw_rotation : hole.ccw_rotation,
     )
     const padCcwRotationDegrees = asNumber(
-      hasIndependentPadRotation ? hole.rect_ccw_rotation : hole.ccw_rotation,
+      hasIndependentPadRotation || hole.shape === "circular_hole_with_rect_pad"
+        ? (hole.rect_ccw_rotation ?? hole.ccw_rotation)
+        : hole.ccw_rotation,
     )
     // Altium slots extend along X and rotate relative to the copper pad.
     const relativeHoleRotation = isSlotted
