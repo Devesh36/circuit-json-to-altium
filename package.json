@@ -29,6 +29,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "altiumts": "github:tscircuit/altiumts#1fad5fa2b7b9f4e83b06072d5b965f153aae1c48",
     "cfb": "^1.2.2",
     "circuit-json": "^0.0.480",

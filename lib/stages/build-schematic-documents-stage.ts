@@ -118,6 +118,7 @@ export class BuildSchematicDocumentsStage extends ConverterStage<
             projectContext: this.context.schematicProjectContext,
           })
         : undefined
+      const embeddedImages = [...(template?.embeddedImages ?? [])]
       const asciiContent = createSchematicDocument({
         unitsPerCircuitUnit: this.context.schematicUnitsPerCircuitUnit,
         childSheets: definition.childSheets,
@@ -126,11 +127,12 @@ export class BuildSchematicDocumentsStage extends ConverterStage<
         includeAllSchematicElements: definition.includeAllSchematicElements,
         sheetSettings: sheetOptions,
         template,
+        embeddedImages,
       })
       return {
         asciiContent,
         content: serializeAltiumSchDocToBinary(asciiContent, {
-          embeddedImages: template?.embeddedImages,
+          embeddedImages,
           objectDefinitionRecords: createHairlinePowerPortDefinitions(
             asciiContent,
             this.context.schematicUnitsPerCircuitUnit / 20,

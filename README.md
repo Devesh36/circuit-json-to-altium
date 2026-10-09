@@ -90,6 +90,13 @@ review files and source/preview comparisons in `tests/assets`.
 
 The current converter handles board outlines, components, pads, plated and non-plated holes, routed copper with vias, nets, PCB silkscreen, schematic components, custom component symbol graphics, component pins, intentionally unconnected source ports, off-sheet ports, labels, native power ports, junctions, traces, and free-standing schematic sheet text and graphics. It also preserves multiple schematic sheets and sanitizes Altium field and filename text.
 
+`schematic_graphic` elements with inline `svg_content` or SVG asset data URLs
+are rendered into embedded native schematic images. Graphics retain their
+centered sheet placement, optional width and height, aspect ratio, and PNG
+transparency. Raster output is limited to 2048 pixels on its longest side.
+External assets need materialized `svg_content`, and images referenced within
+the SVG must use embedded data URLs.
+
 `altiumts` owns the Altium document model, parsing, and native binary serialization. This package owns the Circuit JSON-to-Altium mapping and archive assembly.
 
 ## Development

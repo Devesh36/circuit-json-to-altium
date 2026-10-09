@@ -1,3 +1,4 @@
+import type { AltiumSchematicEmbeddedImageInput } from "altiumts"
 import { getAltiumColorFromCss } from "./altium-color"
 import {
   ALTIUM_SCHEMATIC_GRAPHIC_COLOR,
@@ -11,6 +12,7 @@ import {
   SCHEMATIC_PIN_NAME_FONT_SIZE_CIRCUIT_UNITS,
   SCHEMATIC_PIN_NUMBER_FONT_SIZE_CIRCUIT_UNITS,
 } from "./create-altium-schematic-font-table"
+import { createAltiumSchematicGraphic } from "./create-altium-schematic-graphic"
 import { createOwnedSchematicRecordFields } from "./create-altium-schematic-graphic-record-fields"
 import {
   createAltiumSchematicNetLabelRecordFields,
@@ -67,6 +69,7 @@ type CreateSchematicDocumentParams = {
   schematicSheetId: SchematicSheetId | undefined
   sheetSettings?: AltiumSchematicSheetSettings
   template?: AltiumSchematicTemplate
+  embeddedImages?: AltiumSchematicEmbeddedImageInput[]
 }
 
 type SchematicSheetMembershipParams = {
@@ -342,6 +345,7 @@ export function createSchematicDocument({
   schematicSheetId,
   sheetSettings,
   template,
+  embeddedImages = [],
 }: CreateSchematicDocumentParams): string {
   const scaleRatio = unitsPerCircuitUnit / 20
   const sourcePorts = new Map<SourcePortId, CircuitElement>(
@@ -385,9 +389,7 @@ export function createSchematicDocument({
   })
   const hasRenderableSchematicContent = schematicElements.some(
     (element) =>
-      element.type !== "schematic_graphic" &&
-      element.type !== "schematic_group" &&
-      element.type !== "schematic_symbol",
+      element.type !== "schematic_group" && element.type !== "schematic_symbol",
   )
   const explicitlyPositionedSheetSymbolComponents = new Set(
     sheetSymbolPlans.flatMap((plan) =>
@@ -508,6 +510,25 @@ export function createSchematicDocument({
       }),
       schematicRecordContext,
     )
+  }
+
+  for (const graphic of schematicElements.filter(
+    (element) => element.type === "schematic_graphic",
+  )) {
+    let imageIndex = embeddedImages.length
+    let name = `circuit-graphic-${imageIndex}.png`
+    while (embeddedImages.some((image) => image.name.toLowerCase() === name)) {
+      name = `circuit-graphic-${++imageIndex}.png`
+    }
+    const { embeddedImage, recordFields } = createAltiumSchematicGraphic({
+      graphic,
+      name,
+      sheetHeight: altiumSheetHeight,
+      sheetWidth: altiumSheetWidth,
+      unitsPerCircuitUnit,
+    })
+    addSchematicRecord(recordFields, schematicRecordContext)
+    embeddedImages.push(embeddedImage)
   }
 
   const schematicComponents = schematicElements.filter(
