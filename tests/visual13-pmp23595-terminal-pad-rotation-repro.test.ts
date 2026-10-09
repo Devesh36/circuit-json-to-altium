@@ -100,7 +100,7 @@ test("snapshots the full real PMP23595 board from PR #187", async () => {
   await expect(comparison).toMatchSvgSnapshot(import.meta.path)
 })
 
-test.failing("preserves the imported rotations of real PMP23595 terminals T500–T503", async () => {
+test("preserves the imported rotations of real PMP23595 terminals T500–T503", async () => {
   const { terminalPads } = await exportRealBoard()
   expect(
     Object.fromEntries(
