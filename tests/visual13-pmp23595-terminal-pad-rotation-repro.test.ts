@@ -93,13 +93,16 @@ test("snapshots terminal pad rotation on the real PMP23595 board from PR #187", 
       backgroundColor: "#ffffff",
       viewBox: { ...crop, x: crop.x + shift.x, y: crop.y + shift.y },
     })
-    return {
-      height: height + 32,
-      svg: createSideBySideSvg(sourceCrop, exportedCrop, {
-        source: "Original Altium",
-        converted: "Current export",
-      }),
-    }
+    let panelIndex = 0
+    const rowSvg = createSideBySideSvg(sourceCrop, exportedCrop, {
+      source: "Original Altium",
+      converted: "Current export",
+    }).replace(/<image\b[^>]*\/>/gu, (image) => {
+      const id = `panel-${index}-${panelIndex}`
+      const x = panelIndex++ * 600
+      return `<defs><clipPath id="${id}"><rect x="${x}" y="32" width="600" height="${height}"/></clipPath></defs><g clip-path="url(#${id})">${image}</g>`
+    })
+    return { height: height + 32, svg: rowSvg }
   })
   const height = rows.reduce((sum, row) => sum + row.height, 0)
   let y = 0
