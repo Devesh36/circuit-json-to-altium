@@ -104,7 +104,7 @@ test("snapshots terminal pad rotation on the real PMP23595 board from PR #187", 
   const height = rows.reduce((sum, row) => sum + row.height, 0)
   let y = 0
   const images = rows.map((row) => {
-    const image = `<image x="0" y="${y}" width="1200" height="${row.height}" href="data:image/svg+xml;base64,${Buffer.from(row.svg).toString("base64")}"/>`
+    const image = row.svg.replace("<svg ", `<svg x="0" y="${y}" `)
     y += row.height
     return image
   })
