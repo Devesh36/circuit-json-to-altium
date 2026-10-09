@@ -5,10 +5,11 @@ import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
 const terminalRotations = { T500: 90, T501: 270, T502: 90, T503: 270 }
 const sourceBoardMinimum = { x: 792, y: 1438 }
-const crops = [
-  { name: "upper", x: 2300, y: 3550, width: 1450, height: 950 },
-  { name: "lower", x: 1250, y: 1350, width: 1500, height: 1150 },
-]
+const fullBoardViewport = { x: 648, y: 1294, width: 5088, height: 3388 }
+const panelWidth = 1000
+const panelHeight = Math.round(
+  (panelWidth * fullBoardViewport.height) / fullBoardViewport.width,
+)
 
 async function exportRealBoard() {
   const circuitJson: CircuitElement[] = await Bun.file(
@@ -45,7 +46,7 @@ async function exportRealBoard() {
   return { circuitJson, pcb, terminalPads }
 }
 
-test("snapshots terminal pad rotation on the real PMP23595 board from PR #187", async () => {
+test("snapshots the full real PMP23595 board from PR #187", async () => {
   const { circuitJson, pcb, terminalPads } = await exportRealBoard()
   expect(circuitJson).toHaveLength(5170)
   expect(
@@ -67,53 +68,36 @@ test("snapshots terminal pad rotation on the real PMP23595 board from PR #187", 
       exportedPad.getAltiumMeasurement("HOLESIZE")?.toMillimeters(),
     ).toBeCloseTo(6.4516, 4)
   }
-  const originalSvgs = await Promise.all(
-    crops.map((crop) =>
-      Bun.file(
-        new URL(
-          `./assets/ti-pmp23595-original-${crop.name}.svg`,
-          import.meta.url,
-        ),
-      ).text(),
-    ),
-  )
+  const originalSvg = await Bun.file(
+    new URL("./assets/ti-pmp23595-original-mid1.svg", import.meta.url),
+  ).text()
   const outline = pcb.boardGeometry.outline.points
   const shift = {
     x: Math.min(...outline.map((point) => point.x)) - sourceBoardMinimum.x,
     y: Math.min(...outline.map((point) => point.y)) - sourceBoardMinimum.y,
   }
-  const rows = crops.map((crop, index) => {
-    const height = Math.round((600 * crop.height) / crop.width)
-    const sourceCrop = originalSvgs[index]!
-    const exportedCrop = serializeAltiumPcbToSvg(pcb, {
-      layers: ["MID-LAYER2", "MULTILAYER"],
-      width: 600,
-      height,
-      margin: 0,
-      backgroundColor: "#ffffff",
-      viewBox: { ...crop, x: crop.x + shift.x, y: crop.y + shift.y },
-    })
-    let panelIndex = 0
-    const rowSvg = createSideBySideSvg(sourceCrop, exportedCrop, {
-      source: "Original Altium",
-      converted: "Current export",
-    }).replace(/<image\b[^>]*\/>/gu, (image) => {
-      const id = `panel-${index}-${panelIndex}`
-      const x = panelIndex++ * 600
-      return `<defs><clipPath id="${id}"><rect x="${x}" y="32" width="600" height="${height}"/></clipPath></defs><g clip-path="url(#${id})">${image}</g>`
-    })
-    return { height: height + 32, svg: rowSvg }
+  const exportedSvg = serializeAltiumPcbToSvg(pcb, {
+    layers: ["MID-LAYER2", "MULTILAYER"],
+    width: panelWidth,
+    height: panelHeight,
+    margin: 0,
+    backgroundColor: "#ffffff",
+    viewBox: {
+      ...fullBoardViewport,
+      x: fullBoardViewport.x + shift.x,
+      y: fullBoardViewport.y + shift.y,
+    },
   })
-  const height = rows.reduce((sum, row) => sum + row.height, 0)
-  let y = 0
-  const images = rows.map((row) => {
-    const image = row.svg.replace("<svg ", `<svg x="0" y="${y}" `)
-    y += row.height
-    return image
+  let panelIndex = 0
+  const comparison = createSideBySideSvg(originalSvg, exportedSvg, {
+    source: "Original Altium — full PMP23595 board",
+    converted: "Current export — full PMP23595 board",
+  }).replace(/<image\b[^>]*\/>/gu, (image) => {
+    const id = `panel-${panelIndex}`
+    const x = panelIndex++ * panelWidth
+    return `<defs><clipPath id="${id}"><rect x="${x}" y="32" width="${panelWidth}" height="${panelHeight}"/></clipPath></defs><g clip-path="url(#${id})">${image}</g>`
   })
-  await expect(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="${height}" viewBox="0 0 1200 ${height}">${images.join("")}</svg>`,
-  ).toMatchSvgSnapshot(import.meta.path)
+  await expect(comparison).toMatchSvgSnapshot(import.meta.path)
 })
 
 test.failing("preserves the imported rotations of real PMP23595 terminals T500–T503", async () => {
